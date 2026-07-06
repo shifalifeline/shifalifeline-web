@@ -1,72 +1,74 @@
-import {
-  Pill,
-  Stethoscope,
-  FlaskConical,
-  FileText,
-} from "lucide-react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
-const services = [
-  {
-    icon: Pill,
-    title: "Pharmacy",
-    text: "Order genuine medicines quickly and conveniently.",
-  },
-  {
-    icon: Stethoscope,
-    title: "Doctor Consultation",
-    text: "Book appointments with experienced doctors.",
-  },
-  {
-    icon: FlaskConical,
-    title: "Lab Tests",
-    text: "Book diagnostic tests with reliable reporting.",
-  },
-  {
-    icon: FileText,
-    title: "Upload Prescription",
-    text: "Upload your prescription and we'll take care of the rest.",
-  },
-];
+import { SERVICES } from "../constants/services";
 
 export default function Services() {
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="bg-gray-50 py-20">
+      <div className="mx-auto max-w-7xl px-6">
 
-        <h2 className="text-4xl font-bold text-center">
-          Our Services
-        </h2>
+        <div className="mb-14 text-center">
 
-        <p className="text-center text-gray-600 mt-4 mb-14">
-          Everything you need for your family's healthcare.
-        </p>
+          <span className="inline-block rounded-full bg-green-100 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-green-700">
+            Healthcare Services
+          </span>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <h2 className="mt-6 text-4xl font-bold text-gray-900 md:text-5xl">
+            Everything You Need,
+            <span className="text-green-700"> All in One Place</span>
+          </h2>
 
-          {services.map((service, index) => {
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
+            SHIFA brings together pharmacy, doctors, diagnostics and digital
+            healthcare services into one trusted platform.
+          </p>
+
+        </div>
+
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+
+          {SERVICES.map((service) => {
             const Icon = service.icon;
 
             return (
               <div
-                key={index}
-                className="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition duration-300"
+                key={service.title}
+                className="group rounded-2xl border border-gray-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
-                <Icon
-                  className="text-green-700 mb-5"
-                  size={42}
-                />
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-green-100 text-green-700">
+                  <Icon size={30} />
+                </div>
 
-                <h3 className="text-xl font-bold mb-3">
+                <h3 className="mb-3 text-xl font-bold">
                   {service.title}
                 </h3>
 
-                <p className="text-gray-600">
+                <p className="mb-6 text-gray-600">
                   {service.text}
                 </p>
+
+                <Link
+                  href={service.href}
+                  className="inline-flex items-center gap-2 font-semibold text-green-700 transition-all group-hover:gap-3"
+                >
+                  Learn More
+                  <ArrowRight size={18} />
+                </Link>
               </div>
             );
           })}
 
+        </div>
+
+        <div className="mt-16 text-center">
+          <Link
+            href="/services"
+            className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-8 py-4 text-lg font-semibold text-white transition hover:bg-green-800"
+          >
+            Explore All Services
+            <ArrowRight size={20} />
+          </Link>
         </div>
 
       </div>
