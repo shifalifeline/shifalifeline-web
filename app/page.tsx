@@ -4,6 +4,9 @@ import QuickActions from "../components/QuickActions";
 import WhyChoose from "../components/WhyChoose";
 import Stats from "../components/Stats";
 import Services from "../components/Services";
+import Doctors from "../components/Doctors";
+import Testimonials from "../components/Testimonials";
+import ContactCTA from "../components/ContactCTA";
 import Branches from "../components/Branches";
 import Footer from "../components/Footer";
 
@@ -16,6 +19,9 @@ export default function Home() {
       <WhyChoose />
       <Stats />
       <Services />
+      <Doctors />
+      <Testimonials />
+      <ContactCTA />
       <Branches />
       <Footer />
     </>
