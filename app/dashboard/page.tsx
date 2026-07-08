@@ -1,95 +1,123 @@
 "use client";
 
-import Link from "next/link";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/layout/AppShell";
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
-
-  function handleLogout() {
-    logout();
-    window.location.href = "/login";
-  }
-
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-slate-950 text-white">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <header className="mb-10 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">
-                SHIFA LIFE LINE
-              </h1>
+      <AppShell>
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              Dashboard
+            </h1>
 
-              <p className="mt-2 text-slate-400">
-                Welcome {user?.name}
-              </p>
+            <p className="mt-2 text-slate-400">
+              Welcome to SHIFA LIFE LINE.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <DashboardCard
+              title="Appointments"
+              value="0"
+              description="Upcoming appointments"
+            />
+
+            <DashboardCard
+              title="Patients"
+              value="0"
+              description="Registered patients"
+            />
+
+            <DashboardCard
+              title="Doctors"
+              value="0"
+              description="Available doctors"
+            />
+
+            <DashboardCard
+              title="Medical Records"
+              value="0"
+              description="Digital health records"
+            />
+          </div>
+
+          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+            <h2 className="text-xl font-semibold text-white">
+              System Status
+            </h2>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <StatusCard
+                label="Authentication"
+                status="Operational"
+              />
+
+              <StatusCard
+                label="Frontend"
+                status="Operational"
+              />
+
+              <StatusCard
+                label="Backend"
+                status="Pending"
+              />
             </div>
-
-            <button
-              onClick={handleLogout}
-              className="rounded-lg bg-red-600 px-5 py-2 font-semibold transition hover:bg-red-500"
-            >
-              Logout
-            </button>
-          </header>
-
-          <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <Link
-              href="#"
-              className="rounded-xl border border-slate-800 bg-slate-900 p-6 transition hover:border-cyan-500"
-            >
-              <h2 className="text-xl font-semibold">
-                Appointments
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-400">
-                Book and manage appointments.
-              </p>
-            </Link>
-
-            <Link
-              href="#"
-              className="rounded-xl border border-slate-800 bg-slate-900 p-6 transition hover:border-cyan-500"
-            >
-              <h2 className="text-xl font-semibold">
-                Medical Records
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-400">
-                View your health history.
-              </p>
-            </Link>
-
-            <Link
-              href="#"
-              className="rounded-xl border border-slate-800 bg-slate-900 p-6 transition hover:border-cyan-500"
-            >
-              <h2 className="text-xl font-semibold">
-                Prescriptions
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-400">
-                Access digital prescriptions.
-              </p>
-            </Link>
-
-            <Link
-              href="#"
-              className="rounded-xl border border-slate-800 bg-slate-900 p-6 transition hover:border-cyan-500"
-            >
-              <h2 className="text-xl font-semibold">
-                Emergency
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-400">
-                Quick emergency access.
-              </p>
-            </Link>
           </section>
         </div>
-      </main>
+      </AppShell>
     </ProtectedRoute>
+  );
+}
+
+interface DashboardCardProps {
+  title: string;
+  value: string;
+  description: string;
+}
+
+function DashboardCard({
+  title,
+  value,
+  description,
+}: DashboardCardProps) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+      <h3 className="text-sm uppercase tracking-wide text-slate-400">
+        {title}
+      </h3>
+
+      <p className="mt-4 text-4xl font-bold text-cyan-400">
+        {value}
+      </p>
+
+      <p className="mt-3 text-sm text-slate-500">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+interface StatusCardProps {
+  label: string;
+  status: string;
+}
+
+function StatusCard({
+  label,
+  status,
+}: StatusCardProps) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+      <p className="text-sm text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-3 font-semibold text-emerald-400">
+        {status}
+      </p>
+    </div>
   );
 }
