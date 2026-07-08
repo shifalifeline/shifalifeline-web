@@ -4,13 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import PasswordInput from "@/components/ui/PasswordInput";
 import { validateLogin } from "@/lib/validation/auth";
-import { login } from "@/lib/services/auth.service";
+import { login as loginService } from "@/lib/services/auth.service";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  const { login } = useAuth();
 
   async function handleSubmit(
     e: React.FormEvent<HTMLFormElement>
@@ -31,14 +34,20 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await login({
+      const response = await loginService({
         identifier,
         password,
       });
 
       console.log(response);
 
-      // Navigation will be added after backend integration.
+      login({
+        id: "1",
+        name: "Demo User",
+        email: identifier,
+      });
+
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error(error);
     } finally {
