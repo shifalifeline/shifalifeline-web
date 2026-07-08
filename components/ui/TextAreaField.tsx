@@ -1,0 +1,33 @@
+import { TextareaHTMLAttributes } from "react";
+
+interface TextAreaFieldProps
+  extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label: string;
+  error?: string;
+}
+
+export default function TextAreaField({
+  label,
+  error,
+  className = "",
+  ...props
+}: TextAreaFieldProps) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-slate-200">
+        {label}
+      </label>
+
+      <textarea
+        {...props}
+        className={`min-h-32 w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white outline-none transition focus:border-blue-500 ${className}`}
+      />
+
+      {error && (
+        <p className="text-sm text-red-400">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
