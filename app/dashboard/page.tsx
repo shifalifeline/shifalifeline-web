@@ -2,122 +2,117 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
+import ModulePage from "@/components/layout/ModulePage";
+import StatsCard from "@/components/ui/StatsCard";
+import SearchBar from "@/components/ui/SearchBar";
+import DataTable from "@/components/ui/DataTable";
 
 export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <AppShell>
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              Dashboard
-            </h1>
-
-            <p className="mt-2 text-slate-400">
-              Welcome to SHIFA LIFE LINE.
-            </p>
-          </div>
-
+        <ModulePage
+          title="Dashboard"
+          description="Welcome to SHIFA LIFE LINE. Monitor your healthcare platform from a unified dashboard."
+        >
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <DashboardCard
+            <StatsCard
               title="Appointments"
-              value="0"
-              description="Upcoming appointments"
+              value={0}
+              subtitle="Upcoming appointments"
             />
 
-            <DashboardCard
+            <StatsCard
               title="Patients"
-              value="0"
-              description="Registered patients"
+              value={0}
+              subtitle="Registered patients"
             />
 
-            <DashboardCard
+            <StatsCard
               title="Doctors"
-              value="0"
-              description="Available doctors"
+              value={0}
+              subtitle="Available doctors"
             />
 
-            <DashboardCard
+            <StatsCard
               title="Medical Records"
-              value="0"
-              description="Digital health records"
+              value={0}
+              subtitle="Digital health records"
             />
           </div>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
-            <h2 className="text-xl font-semibold text-white">
-              System Status
-            </h2>
+          <SearchBar placeholder="Search patients, doctors or appointments..." />
 
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <StatusCard
-                label="Authentication"
-                status="Operational"
-              />
+          <DataTable
+            headers={[
+              "Module",
+              "Status",
+              "Last Updated",
+              "Remarks",
+            ]}
+          >
+            <tr>
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Authentication
+              </td>
 
-              <StatusCard
-                label="Frontend"
-                status="Operational"
-              />
+              <td className="px-6 py-4">
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                  Operational
+                </span>
+              </td>
 
-              <StatusCard
-                label="Backend"
-                status="Pending"
-              />
-            </div>
-          </section>
-        </div>
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Just now
+              </td>
+
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Healthy
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Frontend
+              </td>
+
+              <td className="px-6 py-4">
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                  Operational
+                </span>
+              </td>
+
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Just now
+              </td>
+
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Stable
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Backend
+              </td>
+
+              <td className="px-6 py-4">
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                  Pending
+                </span>
+              </td>
+
+              <td className="px-6 py-4 text-sm text-slate-700">
+                —
+              </td>
+
+              <td className="px-6 py-4 text-sm text-slate-700">
+                Under development
+              </td>
+            </tr>
+          </DataTable>
+        </ModulePage>
       </AppShell>
     </ProtectedRoute>
-  );
-}
-
-interface DashboardCardProps {
-  title: string;
-  value: string;
-  description: string;
-}
-
-function DashboardCard({
-  title,
-  value,
-  description,
-}: DashboardCardProps) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-      <h3 className="text-sm uppercase tracking-wide text-slate-400">
-        {title}
-      </h3>
-
-      <p className="mt-4 text-4xl font-bold text-cyan-400">
-        {value}
-      </p>
-
-      <p className="mt-3 text-sm text-slate-500">
-        {description}
-      </p>
-    </div>
-  );
-}
-
-interface StatusCardProps {
-  label: string;
-  status: string;
-}
-
-function StatusCard({
-  label,
-  status,
-}: StatusCardProps) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-      <p className="text-sm text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-3 font-semibold text-emerald-400">
-        {status}
-      </p>
-    </div>
   );
 }
