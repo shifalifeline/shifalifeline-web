@@ -1,35 +1,11 @@
-export interface LoginRequest {
-  identifier: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  fullName: string;
-  mobile: string;
-  email?: string;
-  password: string;
-}
-
-export interface ForgotPasswordRequest {
-  identifier: string;
-}
-
-export interface VerifyOtpRequest {
-  identifier: string;
-  otp: string;
-}
-
-export interface ResetPasswordRequest {
-  token: string;
-  password: string;
-  confirmPassword: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  message?: string;
-  token?: string;
-}
+import type {
+  LoginRequest,
+  RegisterRequest,
+  ForgotPasswordRequest,
+  VerifyOtpRequest,
+  ResetPasswordRequest,
+  AuthResponse,
+} from "@/types/auth.types";
 
 const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -44,7 +20,14 @@ export async function login(
   return {
     success: true,
     message: "Login successful",
-    token: "demo-access-token",
+    accessToken: "demo-access-token",
+    refreshToken: "demo-refresh-token",
+    user: {
+      id: "1",
+      name: "Demo User",
+      email: data.identifier,
+      role: "PATIENT",
+    },
   };
 }
 
@@ -71,6 +54,7 @@ export async function forgotPassword(
   return {
     success: true,
     message: "OTP sent successfully",
+    token: "verification-session-demo",
   };
 }
 
@@ -108,7 +92,8 @@ export async function refreshToken(): Promise<AuthResponse> {
 
   return {
     success: true,
-    token: "new-demo-access-token",
+    accessToken: "new-demo-access-token",
+    refreshToken: "new-demo-refresh-token",
   };
 }
 
