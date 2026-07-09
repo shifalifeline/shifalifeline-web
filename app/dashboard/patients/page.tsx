@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import ModulePage from "@/components/healthcare/ModulePage";
@@ -24,6 +25,7 @@ import type {
 } from "@/types/patient.types";
 
 export default function PatientsPage() {
+  console.log("SPRINT22 PATIENTS PAGE");
   const {
     getPatients,
     createPatient,
@@ -212,6 +214,13 @@ export default function PatientsPage() {
                 </td>
 
                 <td className="px-4 py-3 space-x-3">
+                  <Link
+                    href={`/dashboard/patients/${patient.id}`}
+                    className="text-emerald-400 hover:underline"
+                  >
+                    View
+                  </Link>
+
                   <button
                     className="text-sky-400 hover:underline"
                     onClick={() => {

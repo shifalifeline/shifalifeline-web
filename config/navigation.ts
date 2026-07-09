@@ -54,32 +54,32 @@ export const navigation: NavigationSection[] = [
     items: [
       {
         label: "Patients",
-        href: "/patients",
+       href: "/dashboard/patients",
         icon: Users,
       },
       {
         label: "Doctors",
-        href: "/doctors",
+        href: "/dashboard/doctors",
         icon: Stethoscope,
       },
       {
         label: "Appointments",
-        href: "/appointments",
+        href: "/dashboard/appointments",
         icon: CalendarDays,
       },
       {
         label: "Telemedicine",
-        href: "/telemedicine",
+        href: "/dashboard/telemedicine",
         icon: MonitorSmartphone,
       },
       {
         label: "EMR",
-        href: "/emr",
+        href: "/dashboard/emr",
         icon: ClipboardList,
       },
       {
         label: "Prescriptions",
-        href: "/prescriptions",
+        href: "/dashboard/prescriptions",
         icon: Pill,
       },
     ],
@@ -219,7 +219,7 @@ export const navigation: NavigationSection[] = [
       },
       {
         label: "Settings",
-        href: "/settings",
+        href: "/dashboard/settings",
         icon: Settings,
       },
     ],
