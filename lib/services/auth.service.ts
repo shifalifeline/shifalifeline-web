@@ -5,10 +5,38 @@ import type {
   VerifyOtpRequest,
   ResetPasswordRequest,
   AuthResponse,
+  UserRole,
 } from "@/types/auth.types";
 
 const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+function getRole(identifier: string): UserRole {
+  const value = identifier.toLowerCase().trim();
+
+  switch (value) {
+    case "admin@shifa.com":
+      return "ADMIN";
+
+    case "doctor@shifa.com":
+      return "DOCTOR";
+
+    case "patient@shifa.com":
+      return "PATIENT";
+
+    case "lab@shifa.com":
+      return "DIAGNOSTIC";
+
+    case "pharmacy@shifa.com":
+      return "PHARMACY";
+
+    case "retailer@shifa.com":
+      return "RETAILER";
+
+    default:
+      return "PATIENT";
+  }
+}
 
 export async function login(
   data: LoginRequest
@@ -17,6 +45,8 @@ export async function login(
 
   await delay(1000);
 
+  const role = getRole(data.identifier);
+
   return {
     success: true,
     message: "Login successful",
@@ -24,9 +54,9 @@ export async function login(
     refreshToken: "demo-refresh-token",
     user: {
       id: "1",
-      name: "Demo User",
+      name: role.replace("_", " "),
       email: data.identifier,
-      role: "PATIENT",
+      role,
     },
   };
 }
@@ -86,9 +116,7 @@ export async function resetPassword(
 }
 
 export async function refreshToken(): Promise<AuthResponse> {
-  console.log("Refresh Token");
-
-  await delay(1000);
+  await delay(500);
 
   return {
     success: true,
@@ -98,9 +126,7 @@ export async function refreshToken(): Promise<AuthResponse> {
 }
 
 export async function logout(): Promise<AuthResponse> {
-  console.log("Logout");
-
-  await delay(500);
+  await delay(300);
 
   return {
     success: true,

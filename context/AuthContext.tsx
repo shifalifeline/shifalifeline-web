@@ -8,27 +8,25 @@ import {
   ReactNode,
 } from "react";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import type { AuthUser } from "@/types/auth.types";
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
-  login: (user: User) => void;
+  login: (user: AuthUser) => void;
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
 export function AuthProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,8 +39,11 @@ export function AuthProvider({
     setLoading(false);
   }, []);
 
-  const login = (user: User) => {
-    localStorage.setItem("shifa_user", JSON.stringify(user));
+  const login = (user: AuthUser) => {
+    localStorage.setItem(
+      "shifa_user",
+      JSON.stringify(user)
+    );
     setUser(user);
   };
 
@@ -69,7 +70,9 @@ export function useAuth() {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error(
+      "useAuth must be used within AuthProvider"
+    );
   }
 
   return context;

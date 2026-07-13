@@ -9,7 +9,16 @@ import DataTable from "@/components/ui/DataTable";
 
 export default function DashboardPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute
+      allowedRoles={[
+        "ADMIN",
+        "DOCTOR",
+        "PATIENT",
+        "PHARMACY",
+        "DIAGNOSTIC",
+        "RETAILER",
+      ]}
+    >
       <AppShell>
         <ModulePage
           title="Dashboard"

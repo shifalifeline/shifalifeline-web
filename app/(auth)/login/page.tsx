@@ -6,6 +6,7 @@ import PasswordInput from "@/components/ui/PasswordInput";
 import { validateLogin } from "@/lib/validation/auth";
 import { login as loginService } from "@/lib/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
+import { getHomeRoute } from "@/lib/auth/roles";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -41,15 +42,23 @@ export default function LoginPage() {
 
       console.log(response);
 
-      login({
-        id: "1",
-        name: "Demo User",
-        email: identifier,
-      });
+      if (!response.success || !response.user) {
+        throw new Error(
+          response.message || "Login failed."
+        );
+      }
 
-      window.location.href = "/dashboard";
+      login(response.user);
+
+      window.location.href = getHomeRoute(
+        response.user.role
+      );
     } catch (error) {
       console.error(error);
+
+      setErrors({
+        identifier: "Invalid login credentials.",
+      });
     } finally {
       setLoading(false);
     }
@@ -61,13 +70,18 @@ export default function LoginPage() {
         Login
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
         <div>
           <input
             type="text"
             placeholder="Mobile Number or Email"
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
+            onChange={(e) =>
+              setIdentifier(e.target.value)
+            }
             className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-cyan-500"
           />
 
@@ -84,7 +98,9 @@ export default function LoginPage() {
             name="password"
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
           />
 
           {errors.password && (
@@ -99,7 +115,9 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-lg bg-cyan-600 py-3 font-semibold transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading
+            ? "Logging in..."
+            : "Login"}
         </button>
       </form>
 
