@@ -1,4 +1,3 @@
-import { Patient } from "./patient";
 import { PaymentStatus } from "./payment";
 
 export type BookingType =
@@ -6,6 +5,12 @@ export type BookingType =
   | "DIAGNOSTIC"
   | "PHARMACY"
   | "PACKAGE";
+
+export interface CustomerInfo {
+  fullName: string;
+  mobile: string;
+  email?: string;
+}
 
 export interface Booking {
   id: string;
@@ -17,7 +22,7 @@ export interface Booking {
 
   amount: number;
 
-  patient: Patient;
+  customer: CustomerInfo;
 
   paymentStatus: PaymentStatus;
 
