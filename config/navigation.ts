@@ -54,7 +54,7 @@ export const navigation: NavigationSection[] = [
     items: [
       {
         label: "Patients",
-       href: "/dashboard/patients",
+        href: "/dashboard/patients",
         icon: Users,
       },
       {
@@ -66,6 +66,11 @@ export const navigation: NavigationSection[] = [
         label: "Appointments",
         href: "/dashboard/appointments",
         icon: CalendarDays,
+      },
+      {
+        label: "Bookings",
+        href: "/dashboard/bookings",
+        icon: ClipboardList,
       },
       {
         label: "Telemedicine",
