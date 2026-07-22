@@ -111,5 +111,43 @@ export interface Booking {
 
   internalNotes?: string;
 
+  /**
+   * Module-specific request payload.
+   *
+   * Examples:
+   *
+   * DIAGNOSTIC
+   * {
+   *   tests: string[];
+   *   collectionType: "HOME" | "CENTER";
+   *   preferredDate: string;
+   *   address: string;
+   *   prescription: string;
+   *   notes: string;
+   * }
+   *
+   * APPOINTMENT
+   * {
+   *   doctorId: string;
+   *   preferredDate: string;
+   *   session: "MORNING" | "AFTERNOON" | "EVENING";
+   *   reason: string;
+   * }
+   *
+   * PHARMACY
+   * {
+   *   medicines: unknown[];
+   *   prescription: string;
+   *   deliveryType: string;
+   * }
+   *
+   * PACKAGE
+   * {
+   *   packageId: string;
+   *   preferredDate: string;
+   * }
+   */
+  requestData?: Record<string, unknown>;
+
   assignedTo?: string;
 }
