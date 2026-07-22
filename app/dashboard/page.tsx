@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import ModulePage from "@/components/layout/ModulePage";
@@ -7,7 +9,45 @@ import StatsCard from "@/components/ui/StatsCard";
 import SearchBar from "@/components/ui/SearchBar";
 import DataTable from "@/components/ui/DataTable";
 
+import bookingApi from "@/services/booking.api";
+import type { Booking } from "@/types/booking";
+
 export default function DashboardPage() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        const response = await bookingApi.getBookings();
+        setBookings(response.data);
+      } catch (error) {
+        console.error("Failed to load dashboard bookings.", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBookings();
+  }, []);
+
+  const dashboard = useMemo(() => {
+    return {
+      total: bookings.length,
+      pendingReview: bookings.filter(
+        (b) => (b.status ?? "NEW") === "UNDER_REVIEW"
+      ).length,
+      paymentPending: bookings.filter(
+        (b) => b.status === "PAYMENT_PENDING"
+      ).length,
+      scheduled: bookings.filter(
+        (b) =>
+          b.status === "SCHEDULED" ||
+          b.status === "IN_PROGRESS"
+      ).length,
+    };
+  }, [bookings]);
+
   return (
     <ProtectedRoute
       allowedRoles={[
@@ -22,103 +62,65 @@ export default function DashboardPage() {
       <AppShell>
         <ModulePage
           title="Dashboard"
-          description="Welcome to SHIFA LIFE LINE. Monitor your healthcare platform from a unified dashboard."
+          description="Monitor bookings, quotations, payments and scheduled healthcare services."
         >
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             <StatsCard
-              title="Appointments"
-              value={0}
-              subtitle="Upcoming appointments"
+              title="Total Bookings"
+              value={dashboard.total}
+              subtitle="Bookings received"
             />
-
             <StatsCard
-              title="Patients"
-              value={0}
-              subtitle="Registered patients"
+              title="Pending Review"
+              value={dashboard.pendingReview}
+              subtitle="Awaiting quotation"
             />
-
             <StatsCard
-              title="Doctors"
-              value={0}
-              subtitle="Available doctors"
+              title="Payment Pending"
+              value={dashboard.paymentPending}
+              subtitle="Awaiting payment"
             />
-
             <StatsCard
-              title="Medical Records"
-              value={0}
-              subtitle="Digital health records"
+              title="Scheduled Services"
+              value={dashboard.scheduled}
+              subtitle="Scheduled / In Progress"
             />
           </div>
 
-          <SearchBar placeholder="Search patients, doctors or appointments..." />
+          <SearchBar placeholder="Search bookings, patients, doctors or services..." />
 
           <DataTable
             headers={[
-              "Module",
+              "Reference",
+              "Service",
+              "Customer",
               "Status",
-              "Last Updated",
-              "Remarks",
+              "Payment",
             ]}
           >
-            <tr>
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Authentication
-              </td>
-
-              <td className="px-6 py-4">
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                  Operational
-                </span>
-              </td>
-
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Just now
-              </td>
-
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Healthy
-              </td>
-            </tr>
-
-            <tr>
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Frontend
-              </td>
-
-              <td className="px-6 py-4">
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                  Operational
-                </span>
-              </td>
-
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Just now
-              </td>
-
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Stable
-              </td>
-            </tr>
-
-            <tr>
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Backend
-              </td>
-
-              <td className="px-6 py-4">
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                  Pending
-                </span>
-              </td>
-
-              <td className="px-6 py-4 text-sm text-slate-700">
-                —
-              </td>
-
-              <td className="px-6 py-4 text-sm text-slate-700">
-                Under development
-              </td>
-            </tr>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                  Loading dashboard...
+                </td>
+              </tr>
+            ) : bookings.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                  No bookings found.
+                </td>
+              </tr>
+            ) : (
+              bookings.slice(0, 10).map((booking) => (
+                <tr key={booking.id}>
+                  <td className="px-6 py-4 text-sm text-slate-700">{booking.reference}</td>
+                  <td className="px-6 py-4 text-sm text-slate-700">{booking.title}</td>
+                  <td className="px-6 py-4 text-sm text-slate-700">{booking.customer.fullName}</td>
+                  <td className="px-6 py-4 text-sm text-slate-700">{booking.status ?? "NEW"}</td>
+                  <td className="px-6 py-4 text-sm text-slate-700">{booking.paymentStatus}</td>
+                </tr>
+              ))
+            )}
           </DataTable>
         </ModulePage>
       </AppShell>
