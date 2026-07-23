@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Booking } from "@/types/booking";
-
-const bookings: Booking[] = [];
+import type { Booking } from "@/types/booking";
+import bookingRepository from "@/services/booking.repository";
 
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    data: bookings,
-  });
+  try {
+    const bookings = await bookingRepository.getBookings();
+
+    return NextResponse.json({
+      success: true,
+      message: "Bookings retrieved successfully.",
+      data: bookings,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to retrieve bookings.",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -34,59 +48,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const now = new Date().toISOString();
-
-    const booking: Booking = {
-      id: crypto.randomUUID(),
-
-      reference:
-        body.reference ??
-        `SHIFA-${Date.now().toString().slice(-8)}`,
-
-      type: body.type,
-
-      title: body.title ?? `${body.type} Booking`,
-
-      amount: body.amount ?? 0,
-
-      customer: body.customer,
-
-      paymentStatus: body.paymentStatus ?? "PENDING",
-
-      createdAt: now,
-
-      updatedAt: now,
-
-      status: body.status ?? "NEW",
-
-      priority: body.priority ?? "NORMAL",
-
-      finalAmount: body.finalAmount,
-
-      quotation: body.quotation,
-
-      discounts: body.discounts,
-
-      schedule: body.schedule,
-
-      timeline: body.timeline,
-
-      notifications: body.notifications,
-
-      internalNotes: body.internalNotes,
-
-      requestData: body.requestData,
-
-      assignedTo: body.assignedTo,
-    };
-
-    bookings.unshift(booking);
+    const createdBooking =
+      await bookingRepository.createBooking({
+        reference:
+          body.reference ??
+          `SHIFA-${Date.now().toString().slice(-8)}`,
+        type: body.type,
+        title: body.title ?? `${body.type} Booking`,
+        amount: body.amount ?? 0,
+        customerName: body.customer.fullName,
+        customerPhone: body.customer.mobile,
+        customerEmail: body.customer.email,
+        priority: body.priority,
+      });
 
     return NextResponse.json(
       {
         success: true,
         message: "Booking created successfully.",
-        data: booking,
+        data: createdBooking,
       },
       { status: 201 }
     );

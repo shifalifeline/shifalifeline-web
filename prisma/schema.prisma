@@ -42,6 +42,13 @@ enum PaymentStatus {
   FAILED
 }
 
+enum BookingPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -52,20 +59,86 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Patient {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+}
+
 model Booking {
-  id            String        @id @default(cuid())
-  reference     String        @unique
+  id            String      @id @default(cuid())
+  reference     String      @unique
   type          BookingType
   title         String
   amount        Float
   customerName  String
   customerPhone String
   customerEmail String?
-  status        BookingStatus @default(NEW)
-  paymentStatus PaymentStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+
+  status        BookingStatus   @default(NEW)
+  paymentStatus PaymentStatus   @default(PENDING)
+  priority      BookingPriority @default(NORMAL)
+
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quotations BookingQuotation[]
+  timeline   BookingTimeline[]
+  schedules  BookingSchedule[]
 
   @@index([status])
   @@index([type])
+  @@index([patientId])
+}
+
+model BookingQuotation {
+  id          String  @id @default(cuid())
+  bookingId   String
+  version     Int
+  amount      Float
+  discount    Float   @default(0)
+  finalAmount Float
+  remarks     String?
+
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model BookingTimeline {
+  id        String        @id @default(cuid())
+  bookingId String
+  status    BookingStatus
+  note      String?
+  createdAt DateTime      @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model BookingSchedule {
+  id        String @id @default(cuid())
+  bookingId String
+
+  scheduledOn DateTime
+  session     String
+  assignedTo  String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
 }
