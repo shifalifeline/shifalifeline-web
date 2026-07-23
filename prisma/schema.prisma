@@ -51,10 +51,18 @@ enum BookingPriority {
 
 model User {
   id        String   @id @default(cuid())
+
   name      String
-  email     String   @unique
+
+  phone     String   @unique
+  email     String?  @unique
+
   password  String
-  role      UserRole
+
+  role      UserRole @default(PATIENT)
+
+  isActive  Boolean  @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -141,4 +149,28 @@ model BookingSchedule {
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@index([bookingId])
+}
+model OtpVerification {
+  id         String   @id @default(cuid())
+
+  identifier String
+
+  otp        String
+
+  purpose    OtpPurpose
+
+  expiresAt  DateTime
+
+  verified   Boolean  @default(false)
+
+  used       Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+
+  updatedAt  DateTime @updatedAt
+}
+enum OtpPurpose {
+  REGISTRATION
+  PASSWORD_RESET
+  LOGIN
 }
