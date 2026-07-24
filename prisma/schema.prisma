@@ -68,14 +68,42 @@ model User {
 }
 
 model Patient {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String   @unique
-  email     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
 
-  bookings Booking[]
+  uhid             String   @unique
+
+  firstName        String
+  lastName         String
+
+  phone            String   @unique
+  email            String?
+
+  gender           String
+
+  dateOfBirth      DateTime?
+
+  bloodGroup       String?
+
+  address          String?
+
+  city             String?
+
+  state            String?
+
+  pinCode          String?
+
+  emergencyContact String?
+
+  status           String   @default("Active")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  bookings         Booking[]
+
+  @@index([uhid])
+  @@index([phone])
+  @@index([status])
 }
 
 model Booking {

@@ -1,35 +1,34 @@
-export type Gender = "Male" | "Female" | "Other";
+export type Gender = "Male" | "Female" | "Other" | "UNKNOWN";
 
 export type PatientStatus = "Active" | "Inactive";
 
 export interface Patient {
   id: string;
+
   uhid: string;
 
   firstName: string;
   lastName: string;
 
   phone: string;
-  email?: string;
+  email?: string | null;
 
   gender: Gender;
-  age: number;
 
-  dateOfBirth?: string;
-  bloodGroup?: string;
+  dateOfBirth?: string | null;
+  bloodGroup?: string | null;
 
-  address?: string;
-  city?: string;
-  state?: string;
-  pinCode?: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pinCode?: string | null;
 
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
+  emergencyContact?: string | null;
 
   status: PatientStatus;
 
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PatientStats {
@@ -44,11 +43,27 @@ export interface PatientListResponse {
   stats: PatientStats;
 }
 
-export interface CreatePatientRequest
-  extends Omit<
-    Patient,
-    "id" | "uhid" | "createdAt" | "updatedAt"
-  > {}
+export interface CreatePatientRequest {
+  firstName: string;
+  lastName: string;
+
+  phone: string;
+  email?: string;
+
+  gender: Gender;
+
+  dateOfBirth?: string;
+  bloodGroup?: string;
+
+  address?: string;
+  city?: string;
+  state?: string;
+  pinCode?: string;
+
+  emergencyContact?: string;
+
+  status?: PatientStatus;
+}
 
 export interface UpdatePatientRequest
   extends Partial<CreatePatientRequest> {

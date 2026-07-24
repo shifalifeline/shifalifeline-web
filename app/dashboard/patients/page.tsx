@@ -25,8 +25,7 @@ import type {
 } from "@/types/patient.types";
 
 export default function PatientsPage() {
-  console.log("SPRINT22 PATIENTS PAGE");
-  const {
+   const {
     getPatients,
     createPatient,
     updatePatient,
@@ -174,7 +173,7 @@ export default function PatientsPage() {
             "Phone",
             "Gender",
             "Age",
-            "Status",
+            "Date of Birth",
             "Actions",
           ]}
         >
@@ -206,7 +205,9 @@ export default function PatientsPage() {
                 </td>
 
                 <td className="px-4 py-3 text-slate-300">
-                  {patient.age}
+                  {patient.dateOfBirth
+                  ? new Date(patient.dateOfBirth).toLocaleDateString()
+                  : "-"}
                 </td>
 
                 <td className="px-4 py-3 text-slate-300">

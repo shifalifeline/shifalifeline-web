@@ -82,8 +82,12 @@ export default function PatientDetailsPage() {
                       value={patient.gender}
                     />
                     <Info
-                      label="Age"
-                      value={String(patient.age)}
+                      label="Date of Birth"
+                      value={
+                      patient.dateOfBirth
+                      ? new Date(patient.dateOfBirth).toLocaleDateString()
+                      : "-"
+                      }
                     />
                     <Info
                       label="Address"
@@ -134,7 +138,7 @@ function Info({
   value,
 }: {
   label: string;
-  value?: string;
+  value?: string | null;
 }) {
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">

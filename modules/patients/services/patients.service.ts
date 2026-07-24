@@ -1,3 +1,10 @@
+import { apiClient } from "@/lib/apiClient";
+import { API } from "@/lib/apiEndpoints";
+
+import type {
+  ApiResponse,
+} from "@/types/api.types";
+
 import type {
   Patient,
   PatientListResponse,
@@ -5,120 +12,69 @@ import type {
   UpdatePatientRequest,
 } from "../../../types/patient.types";
 
-const mockPatients: Patient[] = [
-  {
-    id: "1",
-    uhid: "SH000001",
-    firstName: "Amit",
-    lastName: "Roy",
-    phone: "9876543210",
-    email: "amit.roy@example.com",
-    gender: "Male",
-    age: 35,
-    bloodGroup: "B+",
-    city: "Kolkata",
-    state: "West Bengal",
-    status: "Active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    uhid: "SH000002",
-    firstName: "Priya",
-    lastName: "Sen",
-    phone: "9123456780",
-    email: "priya.sen@example.com",
-    gender: "Female",
-    age: 29,
-    bloodGroup: "O+",
-    city: "Kolkata",
-    state: "West Bengal",
-    status: "Active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    uhid: "SH000003",
-    firstName: "Rahul",
-    lastName: "Das",
-    phone: "9988776655",
-    email: "rahul.das@example.com",
-    gender: "Male",
-    age: 44,
-    bloodGroup: "A+",
-    city: "Howrah",
-    state: "West Bengal",
-    status: "Inactive",
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export const PatientsService = {
   async getPatients(): Promise<PatientListResponse> {
-    return {
-      patients: mockPatients,
-      stats: {
-        totalPatients: mockPatients.length,
-        activePatients: mockPatients.filter(
-          (patient) => patient.status === "Active"
-        ).length,
-        todayRegistrations: 1,
-        appointmentsToday: 2,
-      },
-    };
+    const response = await apiClient.get<
+      ApiResponse<PatientListResponse>
+    >(API.PATIENTS.LIST);
+
+    if (!response.success) {
+      throw new Error(response.message);
+    }
+
+    return response.data;
   },
 
-  async getPatientById(id: string): Promise<Patient | undefined> {
-    return mockPatients.find((patient) => patient.id === id);
+  async getPatientById(id: string): Promise<Patient> {
+    const response = await apiClient.get<
+      ApiResponse<Patient>
+    >(API.PATIENTS.DETAILS(id));
+
+    if (!response.success) {
+      throw new Error(response.message);
+    }
+
+    return response.data;
   },
 
   async createPatient(
     patient: CreatePatientRequest
   ): Promise<Patient> {
-    const newPatient: Patient = {
-      ...patient,
-      id: crypto.randomUUID(),
-      uhid: `SH${String(mockPatients.length + 1).padStart(6, "0")}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const response = await apiClient.post<
+      ApiResponse<Patient>
+    >(API.PATIENTS.LIST, patient);
 
-    mockPatients.push(newPatient);
+    if (!response.success) {
+      throw new Error(response.message);
+    }
 
-    return newPatient;
+    return response.data;
   },
 
   async updatePatient(
     patient: UpdatePatientRequest
-  ): Promise<Patient | null> {
-    const index = mockPatients.findIndex(
-      (item) => item.id === patient.id
+  ): Promise<Patient> {
+    const response = await apiClient.put<
+      ApiResponse<Patient>
+    >(
+      API.PATIENTS.DETAILS(patient.id),
+      patient
     );
 
-    if (index === -1) {
-      return null;
+    if (!response.success) {
+      throw new Error(response.message);
     }
 
-    mockPatients[index] = {
-      ...mockPatients[index],
-      ...patient,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return mockPatients[index];
+    return response.data;
   },
 
-  async deletePatient(id: string): Promise<boolean> {
-    const index = mockPatients.findIndex(
-      (patient) => patient.id === id
-    );
+  async deletePatient(id: string): Promise<void> {
+    const response = await apiClient.delete<
+      ApiResponse<null>
+    >(API.PATIENTS.DETAILS(id));
 
-    if (index === -1) {
-      return false;
+    if (!response.success) {
+      throw new Error(response.message);
     }
-
-    mockPatients.splice(index, 1);
-
-    return true;
   },
 };

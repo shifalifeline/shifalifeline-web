@@ -26,13 +26,19 @@ class BookingRepository {
       });
 
       if (!patient) {
-        patient = await tx.patient.create({
-          data: {
-            name: data.customerName,
-            phone: data.customerPhone,
-            email: data.customerEmail,
-          },
-        });
+        const parts = data.customerName.trim().split(/\s+/);
+
+patient = await tx.patient.create({
+  data: {
+    uhid: `SH${Date.now()}`,
+    firstName: parts[0] ?? "Unknown",
+    lastName: parts.slice(1).join(" "),
+    phone: data.customerPhone,
+    email: data.customerEmail,
+    gender: "UNKNOWN",
+    status: "Active",
+  },
+});
       }
 
       const booking = await tx.booking.create({

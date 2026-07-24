@@ -23,7 +23,6 @@ interface PatientFormProps {
 }
 
 const genderOptions = [
-  { label: "Select Gender", value: "" },
   { label: "Male", value: "Male" },
   { label: "Female", value: "Female" },
   { label: "Other", value: "Other" },
@@ -40,10 +39,13 @@ const initialFormState: PatientFormData = {
   phone: "",
   email: "",
   gender: "Male",
-  age: 0,
+  dateOfBirth: "",
   bloodGroup: "",
+  address: "",
   city: "",
   state: "",
+  pinCode: "",
+  emergencyContact: "",
   status: "Active",
 };
 
@@ -54,9 +56,25 @@ export default function PatientForm({
   onSubmit,
 }: PatientFormProps) {
   const [form, setForm] = useState<PatientFormData>({
-    ...initialFormState,
-    ...initialValues,
-  });
+  ...initialFormState,
+  ...(initialValues
+    ? {
+        firstName: initialValues.firstName,
+        lastName: initialValues.lastName,
+        phone: initialValues.phone,
+        email: initialValues.email ?? "",
+        gender: initialValues.gender,
+        dateOfBirth: initialValues.dateOfBirth ?? "",
+        bloodGroup: initialValues.bloodGroup ?? "",
+        address: initialValues.address ?? "",
+        city: initialValues.city ?? "",
+        state: initialValues.state ?? "",
+        pinCode: initialValues.pinCode ?? "",
+        emergencyContact: initialValues.emergencyContact ?? "",
+        status: initialValues.status,
+      }
+    : {}),
+});
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -64,8 +82,7 @@ export default function PatientForm({
     return (
       form.firstName.trim().length > 0 &&
       form.lastName.trim().length > 0 &&
-      /^\d{10}$/.test(form.phone) &&
-      form.age > 0
+      /^[6-9]\d{9}$/.test(form.phone)
     );
   }, [form]);
 
@@ -73,48 +90,13 @@ export default function PatientForm({
     key: K,
     value: PatientFormData[K]
   ) {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-
-    setErrors((prev) => ({
-      ...prev,
-      [key]: "",
-    }));
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleSubmit(
-    e: React.FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (loading) return;
-
-    const next: Record<string, string> = {};
-
-    if (!form.firstName.trim())
-      next.firstName = "First name is required.";
-
-    if (!form.lastName.trim())
-      next.lastName = "Last name is required.";
-
-    if (!/^\d{10}$/.test(form.phone))
-      next.phone = "Enter a valid 10-digit phone number.";
-
-    if (
-      form.email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-    ) {
-      next.email = "Enter a valid email address.";
-    }
-
-    if (form.age <= 0)
-      next.age = "Age must be greater than 0.";
-
-    setErrors(next);
-
-    if (Object.keys(next).length > 0) return;
+    if (!isValid || loading) return;
 
     if (mode === "edit" && initialValues) {
       await onSubmit({
@@ -123,30 +105,25 @@ export default function PatientForm({
       });
     } else {
       await onSubmit(form);
-
       setForm(initialFormState);
     }
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <FormField
           label="First Name"
           value={form.firstName}
           error={errors.firstName}
-          onChange={(e) =>
-            update("firstName", e.target.value)
-          }
+          onChange={(e) => update("firstName", e.target.value)}
         />
 
         <FormField
           label="Last Name"
           value={form.lastName}
           error={errors.lastName}
-          onChange={(e) =>
-            update("lastName", e.target.value)
-          }
+          onChange={(e) => update("lastName", e.target.value)}
         />
 
         <FormField
@@ -155,20 +132,15 @@ export default function PatientForm({
           maxLength={10}
           error={errors.phone}
           onChange={(e) =>
-            update(
-              "phone",
-              e.target.value.replace(/\D/g, "")
-            )
+            update("phone", e.target.value.replace(/\D/g, ""))
           }
         />
 
         <FormField
           label="Email"
-          value={form.email}
+          value={form.email ?? ""}
           error={errors.email}
-          onChange={(e) =>
-            update("email", e.target.value)
-          }
+          onChange={(e) => update("email", e.target.value)}
         />
 
         <SelectField
@@ -181,20 +153,47 @@ export default function PatientForm({
         />
 
         <FormField
-          type="number"
-          label="Age"
-          value={form.age}
-          error={errors.age}
-          onChange={(e) =>
-            update("age", Number(e.target.value))
-          }
+          type="date"
+          label="Date of Birth"
+          value={form.dateOfBirth ?? ""}
+          onChange={(e) => update("dateOfBirth", e.target.value)}
         />
 
         <FormField
           label="Blood Group"
-          value={form.bloodGroup}
+          value={form.bloodGroup ?? ""}
+          onChange={(e) => update("bloodGroup", e.target.value)}
+        />
+
+        <FormField
+          label="Address"
+          value={form.address ?? ""}
+          onChange={(e) => update("address", e.target.value)}
+        />
+
+        <FormField
+          label="City"
+          value={form.city ?? ""}
+          onChange={(e) => update("city", e.target.value)}
+        />
+
+        <FormField
+          label="State"
+          value={form.state ?? ""}
+          onChange={(e) => update("state", e.target.value)}
+        />
+
+        <FormField
+          label="PIN Code"
+          value={form.pinCode ?? ""}
+          onChange={(e) => update("pinCode", e.target.value)}
+        />
+
+        <FormField
+          label="Emergency Contact"
+          value={form.emergencyContact ?? ""}
           onChange={(e) =>
-            update("bloodGroup", e.target.value)
+            update("emergencyContact", e.target.value)
           }
         />
 
@@ -206,28 +205,12 @@ export default function PatientForm({
             update("status", e.target.value as PatientFormData["status"])
           }
         />
-
-        <FormField
-          label="City"
-          value={form.city}
-          onChange={(e) =>
-            update("city", e.target.value)
-          }
-        />
-
-        <FormField
-          label="State"
-          value={form.state}
-          onChange={(e) =>
-            update("state", e.target.value)
-          }
-        />
       </div>
 
       <button
         type="submit"
         disabled={!isValid || loading}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
       >
         {loading
           ? "Saving..."
