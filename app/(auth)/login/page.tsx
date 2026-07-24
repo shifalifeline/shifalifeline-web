@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 import PasswordInput from "@/components/ui/PasswordInput";
 import { validateLogin } from "@/lib/validation/auth";
-import { login as loginService } from "@/lib/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
 import { getHomeRoute } from "@/lib/auth/roles";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,24 +38,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await loginService({
+      const user = await login({
         identifier,
         password,
       });
 
-      console.log(response);
-
-      if (!response.success || !response.user) {
-        throw new Error(
-          response.message || "Login failed."
-        );
-      }
-
-      login(response.user);
-
-      window.location.href = getHomeRoute(
-        response.user.role
-      );
+      router.replace(getHomeRoute(user.role));
+      router.refresh();
     } catch (error) {
       console.error(error);
 
@@ -115,9 +107,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-lg bg-cyan-600 py-3 font-semibold transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading
-            ? "Logging in..."
-            : "Login"}
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
 

@@ -2,18 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 import TextInput from "@/components/ui/TextInput";
+import { forgotPassword } from "@/lib/services/auth.service";
 import { validateForgotPassword } from "@/lib/validation/auth";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
+
   const [identifier, setIdentifier] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
-    const validationErrors = validateForgotPassword(identifier);
+    const validationErrors =
+      validateForgotPassword(identifier);
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -23,10 +31,35 @@ export default function ForgotPasswordPage() {
     setErrors({});
     setLoading(true);
 
-    // Backend API integration will be added in the next sprint.
-    setTimeout(() => {
+    try {
+      const response = await forgotPassword({
+        identifier,
+      });
+
+      if (!response.success) {
+        throw new Error(
+          response.message || "Request failed."
+        );
+      }
+
+      sessionStorage.setItem(
+        "reset_identifier",
+        identifier
+      );
+
+      router.push("/verify-otp");
+    } catch (error) {
+      console.error(error);
+
+      setErrors({
+        identifier:
+          error instanceof Error
+            ? error.message
+            : "Unable to send verification code.",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   }
 
   return (
@@ -36,11 +69,15 @@ export default function ForgotPasswordPage() {
       </h2>
 
       <p className="mb-6 text-sm text-slate-400">
-        Enter your registered mobile number or email address. We'll send you a
-        verification code to reset your password.
+        Enter your registered mobile number or email
+        address. We'll send a verification code to reset
+        your password.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
         <div>
           <TextInput
             type="text"
@@ -48,7 +85,9 @@ export default function ForgotPasswordPage() {
             name="identifier"
             autoComplete="username"
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
+            onChange={(e) =>
+              setIdentifier(e.target.value)
+            }
           />
 
           {errors.identifier && (

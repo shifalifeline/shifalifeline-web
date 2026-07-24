@@ -36,7 +36,8 @@ export interface VerifyOtpRequest {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
+  identifier: string;
+  otp: string;
   password: string;
   confirmPassword: string;
 }

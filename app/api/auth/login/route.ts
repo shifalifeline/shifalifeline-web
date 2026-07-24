@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import {  generateAccessToken } from "@/lib/auth/jwt";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from "@/lib/auth/jwt";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +15,10 @@ export async function POST(req: NextRequest) {
 
     if (!identifier || !password) {
       return NextResponse.json(
-        { message: "Mobile/Email and password are required." },
+        {
+          success: false,
+          message: "Mobile/Email and password are required.",
+        },
         { status: 400 }
       );
     }
@@ -34,14 +40,20 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { message: "Invalid credentials." },
+        {
+          success: false,
+          message: "Invalid credentials.",
+        },
         { status: 401 }
       );
     }
 
     if (!user.isActive) {
       return NextResponse.json(
-        { message: "Account is inactive." },
+        {
+          success: false,
+          message: "Account is inactive.",
+        },
         { status: 403 }
       );
     }
@@ -53,24 +65,33 @@ export async function POST(req: NextRequest) {
 
     if (!passwordMatched) {
       return NextResponse.json(
-        { message: "Invalid credentials." },
+        {
+          success: false,
+          message: "Invalid credentials.",
+        },
         { status: 401 }
       );
     }
 
-    const token = generateAccessToken({
-  id: user.id,
-  role: user.role,
-});
+    const accessToken = generateAccessToken({
+      id: user.id,
+      role: user.role,
+    });
+
+    const refreshToken = generateRefreshToken({
+      id: user.id,
+      role: user.role,
+    });
 
     return NextResponse.json({
       success: true,
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         name: user.name,
-        phone: user.phone,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       },
     });
@@ -79,6 +100,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
+        success: false,
         message: "Internal server error.",
       },
       { status: 500 }

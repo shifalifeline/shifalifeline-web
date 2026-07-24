@@ -1,30 +1,35 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { verifyOtp } from "@/lib/services/auth.service";
 
-interface OTPVerificationProps {
-  identifier?: string;
-  onSuccess?: (token: string) => void;
-}
-
-export default function OTPVerification({
-  identifier = "",
-  onSuccess,
-}: OTPVerificationProps) {
+export default function OTPVerification() {
   const router = useRouter();
 
+  const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const value =
+      sessionStorage.getItem("reset_identifier") ?? "";
+
+    if (!value) {
+      router.replace("/forgot-password");
+      return;
+    }
+
+    setIdentifier(value);
+  }, [router]);
 
   async function handleSubmit(
     e: FormEvent<HTMLFormElement>
   ) {
     e.preventDefault();
 
-    if (otp.trim().length !== 6) {
+    if (otp.length !== 6) {
       setError("OTP must be 6 digits.");
       return;
     }
@@ -39,20 +44,22 @@ export default function OTPVerification({
       });
 
       if (!response.success) {
-        setError(response.message ?? "Invalid OTP.");
-        return;
-      }
-
-      if (onSuccess) {
-        onSuccess(response.token ?? "");
-      } else {
-        router.push(
-          `/reset-password?token=${response.token ?? ""}`
+        throw new Error(
+          response.message ?? "Invalid OTP."
         );
       }
+
+      sessionStorage.setItem("reset_otp", otp);
+
+      router.push("/reset-password");
     } catch (err) {
       console.error(err);
-      setError("Unable to verify OTP. Please try again.");
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to verify OTP."
+      );
     } finally {
       setLoading(false);
     }
@@ -65,10 +72,13 @@ export default function OTPVerification({
     >
       <div>
         <input
-          name="otp"
           value={otp}
           onChange={(e) => {
-            const value = e.target.value.replace(/\D/g, "");
+            const value = e.target.value.replace(
+              /\D/g,
+              ""
+            );
+
             if (value.length <= 6) {
               setOtp(value);
             }
@@ -76,7 +86,6 @@ export default function OTPVerification({
           maxLength={6}
           inputMode="numeric"
           autoComplete="one-time-code"
-          required
           placeholder="Enter OTP"
           className="w-full rounded-lg border px-4 py-3 text-center text-lg tracking-[0.5em] outline-none focus:border-cyan-500"
         />

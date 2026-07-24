@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 import PasswordInput from "@/components/ui/PasswordInput";
 import TextInput from "@/components/ui/TextInput";
+
 import { validateRegister } from "@/lib/validation/auth";
+import { register as registerService } from "@/lib/services/auth.service";
+import { useAuth } from "@/context/AuthContext";
+import { getHomeRoute } from "@/lib/auth/roles";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const { login } = useAuth();
+
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
@@ -16,7 +25,9 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     const validationErrors = validateRegister({
@@ -35,10 +46,37 @@ export default function RegisterPage() {
     setErrors({});
     setLoading(true);
 
-    // Backend API integration will be added later.
-    setTimeout(() => {
+    try {
+      const response = await registerService({
+        fullName,
+        mobile,
+        email: email || undefined,
+        password,
+      });
+
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+
+      const user = await login({
+        identifier: mobile,
+        password,
+      });
+
+      router.replace(getHomeRoute(user.role));
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+
+      setErrors({
+        mobile:
+          error instanceof Error
+            ? error.message
+            : "Registration failed.",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   }
 
   return (
@@ -47,7 +85,10 @@ export default function RegisterPage() {
         Create Account
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
         <div>
           <TextInput
             placeholder="Full Name"
@@ -116,7 +157,9 @@ export default function RegisterPage() {
             name="confirmPassword"
             autoComplete="new-password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) =>
+              setConfirmPassword(e.target.value)
+            }
           />
           {errors.confirmPassword && (
             <p className="mt-1 text-sm text-red-400">
@@ -130,7 +173,9 @@ export default function RegisterPage() {
           disabled={loading}
           className="w-full rounded-lg bg-cyan-600 py-3 font-semibold transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Creating Account..." : "Create Account"}
+          {loading
+            ? "Creating Account..."
+            : "Create Account"}
         </button>
       </form>
 

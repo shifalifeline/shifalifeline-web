@@ -1,18 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import PasswordInput from "@/components/ui/PasswordInput";
+import { resetPassword } from "@/lib/services/auth.service";
 import { validateResetPassword } from "@/lib/validation/resetPassword";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [otp, setOtp] = useState("");
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
+
+  const [errors, setErrors] = useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedIdentifier =
+      sessionStorage.getItem("reset_identifier") ?? "";
+
+    const savedOtp =
+      sessionStorage.getItem("reset_otp") ?? "";
+
+    if (!savedIdentifier || !savedOtp) {
+      router.replace("/forgot-password");
+      return;
+    }
+
+    setIdentifier(savedIdentifier);
+    setOtp(savedOtp);
+  }, [router]);
 
   const passwordStrength = (() => {
     if (!password) return "";
@@ -49,16 +73,32 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      /**
-       * Sprint 20
-       * Connect resetPassword() service here.
-       */
+      const response = await resetPassword({
+        identifier,
+        otp,
+        password,
+        confirmPassword,
+      });
 
-      alert("Password reset successfully.");
+      if (!response.success) {
+        throw new Error(
+          response.message ?? "Password reset failed."
+        );
+      }
 
-      router.push("/login");
+      sessionStorage.removeItem("reset_identifier");
+      sessionStorage.removeItem("reset_otp");
+
+      router.replace("/login");
     } catch (error) {
       console.error(error);
+
+      setErrors({
+        password:
+          error instanceof Error
+            ? error.message
+            : "Unable to reset password.",
+      });
     } finally {
       setLoading(false);
     }
