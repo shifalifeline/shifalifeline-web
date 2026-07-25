@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Booking } from "@/types/booking";
+import type {
+  Booking,
+  AppointmentRequestData,
+} from "@/types/booking";
 import bookingRepository from "@/services/booking.repository";
 
 export async function GET() {
@@ -48,18 +51,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const appointment =
+      body.type === "APPOINTMENT"
+        ? (body.requestData as AppointmentRequestData | undefined)
+        : undefined;
+
     const createdBooking =
       await bookingRepository.createBooking({
         reference:
           body.reference ??
           `SHIFA-${Date.now().toString().slice(-8)}`,
+
         type: body.type,
-        title: body.title ?? `${body.type} Booking`,
+
+        title:
+          body.title ??
+          `${body.type} Booking`,
+
         amount: body.amount ?? 0,
+
         customerName: body.customer.fullName,
+
         customerPhone: body.customer.mobile,
+
         customerEmail: body.customer.email,
+
         priority: body.priority,
+
+        doctorId: appointment?.doctorId,
+
+        preferredDate: appointment?.preferredDate
+          ? new Date(appointment.preferredDate)
+          : undefined,
+
+        preferredSession: appointment?.preferredSession,
+
+        consultationMode: appointment?.consultationMode,
+
+        reasonForVisit: appointment?.reasonForVisit,
+
+        attachments: appointment?.attachments,
       });
 
     return NextResponse.json(

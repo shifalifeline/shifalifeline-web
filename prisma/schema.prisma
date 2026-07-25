@@ -49,6 +49,18 @@ enum BookingPriority {
   URGENT
 }
 
+enum SessionPreference {
+  MORNING
+  AFTERNOON
+  EVENING
+  NO_PREFERENCE
+}
+
+enum ConsultationMode {
+  PHYSICAL
+  VIDEO
+}
+
 model User {
   id        String   @id @default(cuid())
 
@@ -123,6 +135,20 @@ model Booking {
   patientId String?
   patient   Patient? @relation(fields: [patientId], references: [id])
 
+  doctorId          String?
+doctor            Doctor? @relation(fields: [doctorId], references: [id])
+
+preferredDate     DateTime?
+preferredSession  SessionPreference?
+
+reasonForVisit    String?
+
+consultationMode  ConsultationMode?
+
+attachments       BookingAttachment[]
+
+@@index([doctorId])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -168,11 +194,25 @@ model BookingSchedule {
   bookingId String
 
   scheduledOn DateTime
-  session     String
+  session SessionPreference
   assignedTo  String?
   notes       String?
 
   createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+model BookingAttachment {
+  id         String   @id @default(cuid())
+  bookingId  String
+
+  fileName   String
+  fileUrl    String
+  mimeType   String?
+
+  uploadedAt DateTime @default(now())
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
@@ -225,6 +265,8 @@ model Doctor {
   photoUrl           String?
 
   status             String   @default("Active")
+
+  bookings Booking[]
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

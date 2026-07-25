@@ -23,6 +23,21 @@ export type BookingPriority =
   | "HIGH"
   | "URGENT";
 
+export type PreferredSession =
+  | "MORNING"
+  | "AFTERNOON"
+  | "EVENING"
+  | "NO_PREFERENCE";
+
+export type ScheduledSession =
+  | "MORNING"
+  | "AFTERNOON"
+  | "EVENING";
+
+export type ConsultationMode =
+  | "PHYSICAL"
+  | "VIDEO";
+
 export interface CustomerInfo {
   fullName: string;
   mobile: string;
@@ -48,7 +63,7 @@ export interface BookingQuotation {
 
 export interface BookingSchedule {
   date: string;
-  session?: "MORNING" | "AFTERNOON" | "EVENING";
+  session?: ScheduledSession;
   assignedTo?: string;
   location?: string;
 }
@@ -68,6 +83,62 @@ export interface BookingNotification {
   dashboard?: boolean;
   lastSentAt?: string;
 }
+
+export interface BookingAttachment {
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string;
+}
+
+export interface AppointmentRequestData {
+  doctorId: string;
+
+  preferredDate: string;
+
+  preferredSession: PreferredSession;
+
+  reasonForVisit: string;
+
+  consultationMode?: ConsultationMode;
+
+  attachments?: BookingAttachment[];
+}
+
+export interface DiagnosticRequestData {
+  tests: string[];
+
+  collectionType:
+    | "HOME"
+    | "CENTER";
+
+  preferredDate?: string;
+
+  address?: string;
+
+  prescription?: string;
+
+  notes?: string;
+}
+
+export interface PharmacyRequestData {
+  medicines: unknown[];
+
+  prescription?: string;
+
+  deliveryType?: string;
+}
+
+export interface PackageRequestData {
+  packageId: string;
+
+  preferredDate?: string;
+}
+
+export type BookingRequestData =
+  | AppointmentRequestData
+  | DiagnosticRequestData
+  | PharmacyRequestData
+  | PackageRequestData;
 
 export interface Booking {
   id: string;
@@ -112,42 +183,10 @@ export interface Booking {
   internalNotes?: string;
 
   /**
-   * Module-specific request payload.
-   *
-   * Examples:
-   *
-   * DIAGNOSTIC
-   * {
-   *   tests: string[];
-   *   collectionType: "HOME" | "CENTER";
-   *   preferredDate: string;
-   *   address: string;
-   *   prescription: string;
-   *   notes: string;
-   * }
-   *
-   * APPOINTMENT
-   * {
-   *   doctorId: string;
-   *   preferredDate: string;
-   *   session: "MORNING" | "AFTERNOON" | "EVENING";
-   *   reason: string;
-   * }
-   *
-   * PHARMACY
-   * {
-   *   medicines: unknown[];
-   *   prescription: string;
-   *   deliveryType: string;
-   * }
-   *
-   * PACKAGE
-   * {
-   *   packageId: string;
-   *   preferredDate: string;
-   * }
+   * Module-specific payload.
+   * Typed according to Booking Type.
    */
-  requestData?: Record<string, unknown>;
+  requestData?: BookingRequestData;
 
   assignedTo?: string;
 }
