@@ -202,3 +202,34 @@ enum OtpPurpose {
   PASSWORD_RESET
   LOGIN
 }
+model Doctor {
+  id                 String   @id @default(cuid())
+
+  doctorCode         String   @unique
+
+  firstName          String
+  lastName           String
+
+  specialty          String
+
+  qualification      String
+
+  experience         Int?
+
+  registrationNumber String?
+
+  consultationFee    Float?
+
+  bio                String?
+
+  photoUrl           String?
+
+  status             String   @default("Active")
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([doctorCode])
+  @@index([specialty])
+  @@index([status])
+}
