@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import bookingApi from "@/services/booking.api";
 
 interface PatientData {
   fullName: string;
@@ -18,7 +19,6 @@ interface Props {
   preferredDate: string;
   address: string;
   patient: PatientData;
-  prescription: File | null;
   notes: string;
   onBack: () => void;
 }
@@ -29,15 +29,63 @@ export default function StepReview({
   preferredDate,
   address,
   patient,
-  prescription,
   notes,
   onBack,
 }: Props) {
   const [submitted, setSubmitted] = useState(false);
+const [bookingId, setBookingId] = useState("");
+const [submitting, setSubmitting] = useState(false);
+const [error, setError] = useState("");
 
-  const [bookingId] = useState(
-    () => "LAB-" + Date.now().toString().slice(-6)
-  );
+const handleSubmit = async () => {
+  try {
+    setSubmitting(true);
+    setError("");
+
+    const response = await bookingApi.createBooking({
+      type: "DIAGNOSTIC",
+
+      title: "Diagnostic Booking",
+
+      customer: {
+        fullName: patient.fullName,
+        mobile: patient.mobile,
+        email: patient.email || "",
+      },
+
+      requestData: {
+        tests,
+        collectionType:
+          collectionType === "HOME"
+            ? "HOME"
+            : "CENTER",
+        preferredDate,
+        address,
+        notes,
+      },
+    });
+
+    const booking =
+      (response as any)?.data?.data ??
+      (response as any)?.data;
+
+    setBookingId(
+      booking?.reference ??
+        booking?.id ??
+        "LAB-" + Date.now().toString().slice(-6)
+    );
+
+    setSubmitted(true);
+  } catch (err) {
+    console.error(err);
+
+    setError(
+      "Unable to submit booking request. Please try again."
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   if (submitted) {
     return (
@@ -50,8 +98,10 @@ export default function StepReview({
           </h2>
 
           <p className="mt-4 text-slate-700">
-            Thank you. Your diagnostic booking request has been
-            received successfully.
+            Your diagnostic booking request has been submitted successfully.
+            Our operations team will review your request, prepare the best
+            available pricing, and contact you for confirmation before
+            scheduling your test.
           </p>
 
           <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-left">
@@ -60,7 +110,7 @@ export default function StepReview({
             </p>
 
             <p>
-              <strong>Status:</strong> Pending Confirmation
+              <strong>Status:</strong> Under Review
             </p>
 
             <p>
@@ -69,14 +119,21 @@ export default function StepReview({
                 ? "Home Sample Collection"
                 : "Visit SHIFA LIFE LINE"}
             </p>
+                  {collectionType === "HOME" &&
+  address.trim() !== "" && (
+    <p>
+      <strong>Collection Address:</strong>{" "}
+      {address}
+    </p>
+)}
 
             <p>
               <strong>Preferred Date:</strong>{" "}
-              {preferredDate}
+              {preferredDate || "To be decided"}
             </p>
 
             <p>
-              <strong>Patient:</strong>{" "}
+              <strong>Patient Name:</strong>{" "}
               {patient.fullName}
             </p>
 
@@ -84,14 +141,61 @@ export default function StepReview({
               <strong>Mobile:</strong>{" "}
               {patient.mobile}
             </p>
+            {patient.email && (
+  <p>
+    <strong>Email:</strong>{" "}
+    {patient.email}
+  <strong>Total Tests Requested:</strong>{" "}
+  {tests.length}
+</p>
+)}
+<div className="mt-4">
+  <p className="font-semibold">
+    Requested Tests
+  </p>
+{notes.trim() !== "" && (
+  <div className="mt-4">
+    <p className="font-semibold">
+      Additional Instructions
+    </p>
+
+    <p className="mt-2 whitespace-pre-wrap">
+      {notes}
+    </p>
+  </div>
+)}
+
+  <ul className="mt-2 list-disc pl-5">
+    {tests.map((test) => (
+      <li key={test}>{test}</li>
+    ))}
+  </ul>
+</div>
           </div>
 
           <div className="mt-6 rounded-lg border border-cyan-200 bg-cyan-50 p-5 text-left">
-            <p className="text-sm text-slate-700">
-              Our laboratory team will contact you shortly to
-              confirm test availability, pricing, sample
-              collection timing and report delivery.
-            </p>
+            <div className="space-y-2 text-sm text-slate-700">
+  <p>
+    ✓ Your booking has been received successfully.
+  </p>
+
+  <p>
+    ✓ Our team will verify your requested investigations.
+  </p>
+
+  <p>
+    ✓ You will receive the best available promotional quotation.
+  </p>
+
+  <p>
+    ✓ After quotation approval, a payment link will be shared.
+  </p>
+
+  <p>
+    ✓ Sample collection / laboratory visit will be scheduled after
+    payment confirmation.
+  </p>
+</div>
           </div>
         </div>
       </div>
@@ -197,22 +301,6 @@ export default function StepReview({
           )}
         </div>
 
-        <div>
-          <h3 className="font-semibold text-slate-900">
-            Prescription
-          </h3>
-
-          {prescription ? (
-            <p className="mt-2">
-              {prescription.name}
-            </p>
-          ) : (
-            <p className="mt-2 text-slate-500">
-              No prescription uploaded.
-            </p>
-          )}
-        </div>
-
         {notes.trim() !== "" && (
           <div>
             <h3 className="font-semibold text-slate-900">
@@ -233,22 +321,30 @@ export default function StepReview({
           availability, pricing and sample collection schedule.
         </p>
       </div>
+      {error && (
+  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+    {error}
+  </div>
+)}
 
       <div className="flex justify-between">
         <button
           type="button"
-          onClick={onBack}
-          className="rounded-lg border border-slate-300 px-6 py-3"
-        >
-          Back
+          disabled={submitting}
+         onClick={onBack}
+          className="rounded-lg border border-slate-300 px-6 py-3 disabled:cursor-not-allowed disabled:opacity-50"
+>
         </button>
 
         <button
-          type="button"
-          onClick={() => setSubmitted(true)}
-          className="rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-500"
-        >
-          Submit Booking Request
+  type="button"
+  disabled={submitting}
+  onClick={handleSubmit}
+  className="rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {submitting
+    ? "Submitting Booking..."
+    : "Submit Booking Request"}
         </button>
       </div>
     </div>

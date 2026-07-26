@@ -27,15 +27,15 @@ export interface CreateBookingPayload {
 
   priority?: BookingPriority;
 
+  // Appointment
   doctorId?: string;
-
   preferredDate?: Date;
-
   preferredSession?: SessionPreference;
-
   consultationMode?: ConsultationMode;
-
   reasonForVisit?: string;
+
+  // Generic module payload
+  requestData?: Prisma.InputJsonValue;
 
   attachments?: BookingAttachmentPayload[];
 }
@@ -114,6 +114,8 @@ class BookingRepository {
           consultationMode: data.consultationMode,
 
           reasonForVisit: data.reasonForVisit,
+
+          requestData: data.requestData,
 
           attachments:
             data.attachments &&

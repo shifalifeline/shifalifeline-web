@@ -1,11 +1,9 @@
-// Complete DiagnosticWizard.tsx
 "use client";
 
 import { useState } from "react";
 import StepTests from "./StepTests";
 import StepCollection from "./StepCollection";
 import StepPatient from "./StepPatient";
-import StepUploadPrescription from "./StepUploadPrescription";
 import StepReview from "./StepReview";
 
 export default function DiagnosticWizard() {
@@ -26,7 +24,6 @@ export default function DiagnosticWizard() {
     city: "",
   });
 
-  const [prescription, setPrescription] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
 
   function toggleTest(test: string) {
@@ -82,28 +79,18 @@ export default function DiagnosticWizard() {
 
     case 4:
       return (
-        <StepUploadPrescription
-          prescription={prescription}
-          notes={notes}
-          onPrescriptionChange={setPrescription}
-          onNotesChange={setNotes}
-          onBack={() => setStep(3)}
-          onNext={() => setStep(5)}
-        />
-      );
-
-    default:
-      return (
         <StepReview
           tests={tests}
           collectionType={collectionType}
           preferredDate={preferredDate}
           address={address}
           patient={patient}
-          prescription={prescription}
           notes={notes}
-          onBack={() => setStep(4)}
+          onBack={() => setStep(3)}
         />
       );
+
+    default:
+      return null;
   }
 }

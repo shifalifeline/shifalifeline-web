@@ -4,6 +4,7 @@ import type {
   AppointmentRequestData,
 } from "@/types/booking";
 import bookingRepository from "@/services/booking.repository";
+import { DiagnosticRequestData } from "@/types/booking";
 
 export async function GET() {
   try {
@@ -52,45 +53,69 @@ export async function POST(req: NextRequest) {
     }
 
     const appointment =
-      body.type === "APPOINTMENT"
-        ? (body.requestData as AppointmentRequestData | undefined)
-        : undefined;
+    body.requestData as AppointmentRequestData | undefined;
+
+    const diagnostic =
+    body.requestData as DiagnosticRequestData | undefined;
 
     const createdBooking =
       await bookingRepository.createBooking({
-        reference:
-          body.reference ??
-          `SHIFA-${Date.now().toString().slice(-8)}`,
+        reference: `BK-${Date.now()}`,
 
-        type: body.type,
+  type: body.type,
 
-        title:
-          body.title ??
-          `${body.type} Booking`,
+  title: body.title ?? `${body.type} Booking`,
 
-        amount: body.amount ?? 0,
+ amount: body.amount ?? 0,
 
-        customerName: body.customer.fullName,
+  customerName: body.customer.fullName,
 
-        customerPhone: body.customer.mobile,
+  customerPhone: body.customer.mobile,
 
-        customerEmail: body.customer.email,
+  customerEmail: body.customer.email,
 
-        priority: body.priority,
+  priority: body.priority,
 
-        doctorId: appointment?.doctorId,
+  // Appointment fields
+  doctorId:
+    body.type === "APPOINTMENT"
+      ? appointment?.doctorId
+      : undefined,
 
-        preferredDate: appointment?.preferredDate
-          ? new Date(appointment.preferredDate)
-          : undefined,
+  preferredDate:
+    body.type === "APPOINTMENT"
+      ? appointment?.preferredDate
+        ? new Date(appointment.preferredDate)
+        : undefined
+      : body.type === "DIAGNOSTIC"
+      ? diagnostic?.preferredDate
+        ? new Date(diagnostic.preferredDate)
+        : undefined
+      : undefined,
 
-        preferredSession: appointment?.preferredSession,
+  preferredSession:
+    body.type === "APPOINTMENT"
+      ? appointment?.preferredSession
+      : undefined,
 
-        consultationMode: appointment?.consultationMode,
+  consultationMode:
+    body.type === "APPOINTMENT"
+      ? appointment?.consultationMode
+      : undefined,
 
-        reasonForVisit: appointment?.reasonForVisit,
+  reasonForVisit:
+    body.type === "APPOINTMENT"
+      ? appointment?.reasonForVisit
+      : undefined,
 
-        attachments: appointment?.attachments,
+  requestData: body.requestData
+  ? JSON.parse(JSON.stringify(body.requestData))
+  : undefined,
+  
+  attachments:
+    body.type === "APPOINTMENT"
+      ? appointment?.attachments
+      : undefined,
       });
 
     return NextResponse.json(
