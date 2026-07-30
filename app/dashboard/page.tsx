@@ -11,6 +11,8 @@ import DataTable from "@/components/ui/DataTable";
 
 import bookingApi from "@/services/booking.api";
 import type { Booking } from "@/types/booking";
+import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
+import BookingStatusBadge from "@/components/bookings/BookingStatusBadge";
 
 export default function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -116,8 +118,12 @@ export default function DashboardPage() {
                   <td className="px-6 py-4 text-sm text-slate-700">{booking.reference}</td>
                   <td className="px-6 py-4 text-sm text-slate-700">{booking.title}</td>
                   <td className="px-6 py-4 text-sm text-slate-700">{booking.customer.fullName}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700">{booking.status ?? "NEW"}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700">{booking.paymentStatus}</td>
+<td className="px-6 py-4">
+  <BookingStatusBadge status={booking.status} />
+</td>
+<td className="px-6 py-4">
+  <PaymentStatusBadge status={booking.paymentStatus} />
+</td>
                 </tr>
               ))
             )}
