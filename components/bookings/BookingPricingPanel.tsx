@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import bookingService from "@/services/booking.service";
+import bookingApi from "@/services/booking.api";
 import { Booking } from "@/types/booking";
 
 interface Props {
@@ -16,27 +16,40 @@ export default function BookingPricingPanel({
     booking.quotation?.manualDiscount ?? 0
   );
 
-  const finalAmount = useMemo(() => {
+  const [saving, setSaving] = useState(false);
+
+  const payableAmount = useMemo(() => {
     const amount = booking.amount - discount;
 
     return amount < 0 ? 0 : amount;
   }, [booking.amount, discount]);
 
-  const handleSaveQuotation = () => {
-    const result = bookingService.applyQuotation(
-      booking,
-      {
-        originalAmount: booking.amount,
-        promotionalDiscount: 0,
-        manualDiscount: discount,
-        finalAmount,
-        preparedAt: new Date().toISOString(),
-        preparedBy: "Administrator",
-      }
-    );
+  async function handleSaveQuotation() {
+    try {
+      setSaving(true);
 
-    alert(result.message);
-  };
+      const response =
+        await bookingApi.applyQuotation(
+          booking.id,
+          {
+            originalAmount: booking.amount,
+            promotionalDiscount: 0,
+            manualDiscount: discount,
+            finalAmount: payableAmount,
+            preparedAt: new Date().toISOString(),
+            preparedBy: "Administrator",
+          }
+        );
+
+      alert(response.message);
+    } catch (error) {
+      console.error(error);
+
+      alert("Unable to apply quotation.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
@@ -65,10 +78,11 @@ export default function BookingPricingPanel({
             min={0}
             max={booking.amount}
             value={discount}
+            disabled={saving}
             onChange={(e) =>
               setDiscount(Number(e.target.value))
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-cyan-600"
           />
         </div>
 
@@ -78,16 +92,19 @@ export default function BookingPricingPanel({
           </span>
 
           <span className="text-xl font-bold text-cyan-700">
-            ₹{finalAmount.toLocaleString("en-IN")}
+            ₹{payableAmount.toLocaleString("en-IN")}
           </span>
         </div>
 
         <button
           type="button"
+          disabled={saving}
           onClick={handleSaveQuotation}
-          className="w-full rounded-lg bg-cyan-600 py-2 font-semibold text-white transition hover:bg-cyan-700"
+          className="w-full rounded-lg bg-cyan-600 py-2 font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Save Quotation
+          {saving
+            ? "Saving..."
+            : "Save Quotation"}
         </button>
       </div>
     </div>

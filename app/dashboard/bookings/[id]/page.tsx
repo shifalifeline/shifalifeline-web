@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -12,7 +13,8 @@ import BookingStatusPanel from "@/components/bookings/BookingStatusPanel";
 import BookingPaymentPanel from "@/components/bookings/BookingPaymentPanel";
 import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
 
-import { bookings } from "@/data/bookings";
+import bookingApi from "@/services/booking.api";
+import { Booking } from "@/types/booking";
 
 interface Props {
   params: {
@@ -23,9 +25,56 @@ interface Props {
 export default function BookingDetailsPage({
   params,
 }: Props) {
-  const booking = bookings.find(
-    (item) => item.id === params.id
-  );
+  const [booking, setBooking] =
+    useState<Booking | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadBooking() {
+      try {
+        const response =
+          await bookingApi.getBooking(params.id);
+
+        if (mounted) {
+          setBooking(response.data);
+        }
+      } catch (error) {
+        console.error(error);
+        setBooking(null);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadBooking();
+
+    return () => {
+      mounted = false;
+    };
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <ProtectedRoute allowedRoles={["ADMIN"]}>
+        <AppShell>
+          <ModulePage
+            title="Loading Booking..."
+            description="Fetching booking details."
+          >
+            <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+              Loading booking...
+            </div>
+          </ModulePage>
+        </AppShell>
+      </ProtectedRoute>
+    );
+  }
 
   if (!booking) {
     notFound();
@@ -39,7 +88,7 @@ export default function BookingDetailsPage({
           description="Review and manage this booking."
         >
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* LEFT COLUMN */}
+                        {/* LEFT COLUMN */}
 
             <div className="space-y-6 lg:col-span-2">
               <div className="rounded-xl border bg-white p-6 shadow-sm">
@@ -189,31 +238,44 @@ export default function BookingDetailsPage({
                     </p>
 
                     <BookingPriorityBadge
-                      priority={booking.priority}
+                      priority={
+                        booking.priority ?? "NORMAL"
+                      }
                     />
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-xl border bg-white p-6 shadow-sm">
+                            <div className="rounded-xl border bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold">
                   Operations
                 </h2>
 
                 <div className="grid gap-3">
-                  <button className="rounded-lg bg-cyan-600 py-2 font-semibold text-white transition hover:bg-cyan-700">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-cyan-600 py-2 font-semibold text-white transition hover:bg-cyan-700"
+                  >
                     Apply Promotional Pricing
                   </button>
 
-                  <button className="rounded-lg bg-indigo-600 py-2 font-semibold text-white transition hover:bg-indigo-700">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-indigo-600 py-2 font-semibold text-white transition hover:bg-indigo-700"
+                  >
                     Generate Payment Link
                   </button>
 
-                  <button className="rounded-lg bg-emerald-600 py-2 font-semibold text-white transition hover:bg-emerald-700">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-emerald-600 py-2 font-semibold text-white transition hover:bg-emerald-700"
+                  >
                     Schedule Service
                   </button>
 
-                  <button className="rounded-lg bg-orange-600 py-2 font-semibold text-white transition hover:bg-orange-700">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-orange-600 py-2 font-semibold text-white transition hover:bg-orange-700"
+                  >
                     Notify Patient
                   </button>
                 </div>

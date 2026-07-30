@@ -1,99 +1,94 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import bookingService from "@/services/booking.service";
+import bookingApi from "@/services/booking.api";
 import { Booking } from "@/types/booking";
 
-import PaymentStatusBadge from "./PaymentStatusBadge";
-
-interface Props {
+interface BookingPaymentPanelProps {
   booking: Booking;
 }
 
 const gateways = [
-  "Razorpay",
-  "PhonePe",
-  "PayU",
-  "Cash",
-  "Bank Transfer",
-];
+  "RAZORPAY",
+  "PHONEPE",
+  "PAYU",
+] as const;
 
 export default function BookingPaymentPanel({
   booking,
-}: Props) {
-  const [gateway, setGateway] = useState("Razorpay");
-  const [reference, setReference] = useState("");
+}: BookingPaymentPanelProps) {
+  type PaymentGateway =
+  (typeof gateways)[number];
 
-  const payableAmount = useMemo(() => {
-    return (
-      booking.quotation?.finalAmount ??
-      booking.finalAmount ??
-      booking.amount
-    );
-  }, [
-    booking.amount,
-    booking.finalAmount,
-    booking.quotation,
-  ]);
+const [gateway, setGateway] =
+  useState<PaymentGateway>(gateways[0]);
 
-  const handleGenerateLink = () => {
-    const result =
-      bookingService.generatePaymentLink(
-        booking,
-        gateway
+  const [loading, setLoading] =
+    useState(false);
+
+  async function generatePaymentLink() {
+    try {
+      setLoading(true);
+
+      const response =
+        await bookingApi.generatePaymentLink(
+          booking.id,
+          gateway
+        );
+
+      if (
+        response.data?.paymentLink
+      ) {
+        window.open(
+          response.data.paymentLink,
+          "_blank"
+        );
+      } else {
+        alert(
+          "Payment link generated successfully."
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      alert(
+        "Unable to generate payment link."
       );
-
-    if (!result.success || !result.data) {
-      alert(result.message);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setReference(result.data.paymentReference);
-
-    alert(result.message);
-  };
+  }
 
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
       <h2 className="mb-5 text-lg font-semibold">
-        Payment Management
+        Payment
       </h2>
 
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <span className="text-slate-600">
-            Amount Payable
-          </span>
-
-          <span className="text-lg font-bold text-cyan-700">
-            ₹{payableAmount.toLocaleString("en-IN")}
-          </span>
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm text-slate-600">
             Payment Status
-          </p>
+          </span>
 
-          <PaymentStatusBadge
-            status={booking.paymentStatus}
-          />
+          <span className="font-semibold">
+            {booking.paymentStatus}
+          </span>
         </div>
 
         <div>
-          <label
-            htmlFor="paymentGateway"
-            className="mb-2 block text-sm font-medium"
-          >
+          <label className="mb-2 block text-sm font-medium">
             Payment Gateway
           </label>
 
           <select
-            id="paymentGateway"
             value={gateway}
+            disabled={loading}
             onChange={(e) =>
-              setGateway(e.target.value)
+              setGateway(
+                e.target.value as
+                  (typeof gateways)[number]
+              )
             }
             className="w-full rounded-lg border border-slate-300 px-3 py-2"
           >
@@ -108,24 +103,15 @@ export default function BookingPaymentPanel({
           </select>
         </div>
 
-        {reference && (
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">
-              Payment Reference
-            </p>
-
-            <p className="font-semibold">
-              {reference}
-            </p>
-          </div>
-        )}
-
         <button
           type="button"
-          onClick={handleGenerateLink}
-          className="w-full rounded-lg bg-indigo-600 py-2 font-semibold text-white transition hover:bg-indigo-700"
+          disabled={loading}
+          onClick={generatePaymentLink}
+          className="w-full rounded-lg bg-cyan-600 py-2 font-semibold text-white hover:bg-cyan-700 disabled:opacity-50"
         >
-          Generate Payment Link
+          {loading
+            ? "Generating..."
+            : "Generate Payment Link"}
         </button>
       </div>
     </div>

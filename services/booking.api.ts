@@ -47,6 +47,15 @@ class BookingApi {
     >(API.BOOKINGS.DELETE(id));
   }
 
+  /**
+   * Sprint 30
+   * Backend contract:
+   * {
+   *   amount,
+   *   discount,
+   *   remarks
+   * }
+   */
   async applyQuotation(
     id: string,
     quotation: BookingQuotation
@@ -55,7 +64,13 @@ class BookingApi {
       ApiResponse<Booking>
     >(
       API.BOOKINGS.QUOTATION(id),
-      quotation
+      {
+        amount: quotation.finalAmount,
+        discount:
+          quotation.promotionalDiscount +
+          quotation.manualDiscount,
+        remarks: quotation.reason,
+      }
     );
   }
 
