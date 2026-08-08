@@ -116,7 +116,7 @@ export const navigation: NavigationSection[] = [
     items: [
       {
         label: "Products",
-        href: "/products",
+        href: "/dashboard/products",
         icon: Package,
       },
       {
@@ -126,7 +126,7 @@ export const navigation: NavigationSection[] = [
       },
       {
         label: "Inventory",
-        href: "/inventory",
+        href: "/dashboard/inventory",
         icon: Package,
       },
       {

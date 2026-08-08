@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -61,12 +61,21 @@ enum ConsultationMode {
   VIDEO
 }
 
+enum StockMovementType {
+  RECEIPT
+  ISSUE
+  ADJUSTMENT
+  RETURN
+  DAMAGE
+  EXPIRY
+}
+
 model User {
   id String @id @default(cuid())
 
   name String
 
-  phone String  @unique
+  phone String @unique
   email String? @unique
 
   password String
@@ -144,7 +153,6 @@ model Booking {
   reasonForVisit   String?
   consultationMode ConsultationMode?
 
-  // Module-specific payload (Sprint 29+)
   requestData Json?
 
   attachments BookingAttachment[]
@@ -161,7 +169,6 @@ model Booking {
   @@index([type])
   @@index([patientId])
 }
-
 model BookingQuotation {
   id          String  @id @default(cuid())
   bookingId   String
@@ -237,7 +244,6 @@ model OtpVerification {
   used Boolean @default(false)
 
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 }
 
@@ -279,4 +285,99 @@ model Doctor {
   @@index([doctorCode])
   @@index([specialty])
   @@index([status])
+}
+model Medicine {
+  id String @id @default(cuid())
+
+  code String @unique
+
+  medicineName String
+  genericName  String
+  brandName    String
+
+  manufacturer String
+  category     String
+
+  dosageForm String
+  strength   String
+
+  hsnCode String
+  gst     Float
+
+  purchasePrice Float
+  sellingPrice  Float
+  mrp           Float
+
+  packSize String
+
+  reorderLevel Int @default(0)
+
+  prescriptionRequired Boolean @default(false)
+  drugSchedule         String
+
+  retail    Boolean @default(true)
+  wholesale Boolean @default(false)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryBatches InventoryBatch[]
+
+  @@index([medicineName])
+  @@index([genericName])
+  @@index([manufacturer])
+  @@index([category])
+  @@index([active])
+}
+
+model InventoryBatch {
+  id String @id @default(cuid())
+
+  medicineId String
+
+  batchNumber String
+
+  expiryDate DateTime
+
+  quantity Int @default(0)
+
+  purchasePrice Float
+  sellingPrice  Float
+  mrp           Float
+
+  receivedAt DateTime @default(now())
+
+  medicine Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  movements StockMovement[]
+
+  @@unique([medicineId, batchNumber])
+  @@index([medicineId])
+  @@index([expiryDate])
+}
+
+model StockMovement {
+  id String @id @default(cuid())
+
+  inventoryBatchId String
+
+  type StockMovementType
+
+  quantity Int
+
+  reference String?
+
+  remarks String?
+
+  createdBy String?
+
+  createdAt DateTime @default(now())
+
+  inventoryBatch InventoryBatch @relation(fields: [inventoryBatchId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryBatchId])
+  @@index([type])
+  @@index([createdAt])
 }
