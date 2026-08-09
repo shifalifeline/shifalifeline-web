@@ -18,7 +18,8 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      message: "Inventory batches retrieved successfully.",
+      message:
+        "Inventory batches retrieved successfully.",
       data: batches,
     });
   } catch (error) {
@@ -91,10 +92,34 @@ export async function POST(
       );
     }
 
+    // Do not allow expired medicines to be received.
+    const today = new Date();
+
+    today.setHours(0, 0, 0, 0);
+
+    const expiryDay = new Date(
+      expiryDate
+    );
+
+    expiryDay.setHours(0, 0, 0, 0);
+
+    if (expiryDay <= today) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Expired medicines cannot be received into inventory. Please enter a future expiry date.",
+        },
+        { status: 400 }
+      );
+    }
+
     const batch =
       await inventoryRepository.receiveStock({
-        medicineId: body.medicineId,
-        batchNumber: body.batchNumber,
+        medicineId:
+          body.medicineId,
+        batchNumber:
+          body.batchNumber,
         expiryDate,
         quantity,
         purchasePrice: Number(
@@ -103,7 +128,9 @@ export async function POST(
         sellingPrice: Number(
           body.sellingPrice ?? 0
         ),
-        mrp: Number(body.mrp ?? 0),
+        mrp: Number(
+          body.mrp ?? 0
+        ),
         reference:
           body.reference,
         remarks:

@@ -30,6 +30,30 @@ interface InventoryMedicine {
   lowStock: boolean;
 }
 
+interface StockForm {
+  medicineId: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: string;
+  purchasePrice: string;
+  sellingPrice: string;
+  mrp: string;
+  reference: string;
+  remarks: string;
+}
+
+const emptyForm: StockForm = {
+  medicineId: "",
+  batchNumber: "",
+  expiryDate: "",
+  quantity: "",
+  purchasePrice: "",
+  sellingPrice: "",
+  mrp: "",
+  reference: "",
+  remarks: "",
+};
+
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<
     InventoryMedicine[]
@@ -37,6 +61,13 @@ export default function InventoryPage() {
 
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showReceive, setShowReceive] =
+    useState(false);
+  const [form, setForm] =
+    useState<StockForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     loadInventory();
@@ -47,17 +78,11 @@ export default function InventoryPage() {
       setLoading(true);
 
       const response = await fetch(
-        "/api/inventory",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-        }
+        "/api/inventory"
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
       if (!response.ok || !result.success) {
         throw new Error(
@@ -72,7 +97,6 @@ export default function InventoryPage() {
         "Failed to load inventory.",
         error
       );
-
       setInventory([]);
     } finally {
       setLoading(false);
@@ -83,9 +107,7 @@ export default function InventoryPage() {
     const keyword =
       search.trim().toLowerCase();
 
-    if (!keyword) {
-      return inventory;
-    }
+    if (!keyword) return inventory;
 
     return inventory.filter(
       (item) =>
@@ -126,11 +148,9 @@ export default function InventoryPage() {
               batch.expiryDate
             );
 
-            const today = new Date();
-
             const days =
               (expiry.getTime() -
-                today.getTime()) /
+                Date.now()) /
               (1000 * 60 * 60 * 24);
 
             return (
@@ -150,15 +170,134 @@ export default function InventoryPage() {
     };
   }, [inventory]);
 
-  function formatExpiry(
-    date: string
-  ) {
+  function formatExpiry(date: string) {
     return new Date(
       date
     ).toLocaleDateString("en-IN", {
       month: "short",
       year: "numeric",
     });
+  }
+
+  function handleChange(
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) {
+    const { name, value } =
+      event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  async function receiveStock(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (
+      !form.medicineId ||
+      !form.batchNumber.trim() ||
+      !form.expiryDate ||
+      !form.quantity
+    ) {
+      setError(
+        "Medicine, batch number, expiry date and quantity are required."
+      );
+      return;
+    }
+
+    const quantity = Number(form.quantity);
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    ) {
+      setError(
+        "Quantity must be a positive whole number."
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const response = await fetch(
+        "/api/inventory/batches",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            medicineId:
+              form.medicineId,
+            batchNumber:
+              form.batchNumber.trim(),
+            expiryDate:
+              form.expiryDate,
+            quantity,
+            purchasePrice:
+              Number(
+                form.purchasePrice || 0
+              ),
+            sellingPrice:
+              Number(
+                form.sellingPrice || 0
+              ),
+            mrp: Number(form.mrp || 0),
+            reference:
+              form.reference.trim() ||
+              undefined,
+            remarks:
+              form.remarks.trim() ||
+              undefined,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to receive stock."
+        );
+      }
+
+      setSuccess(
+        "Stock received successfully."
+      );
+
+      setForm(emptyForm);
+      setShowReceive(false);
+
+      await loadInventory();
+    } catch (error) {
+      console.error(
+        "Failed to receive stock.",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to receive stock."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -173,72 +312,236 @@ export default function InventoryPage() {
           title="Inventory Management"
           description="Monitor medicine stock, batches, expiry and reorder requirements."
           actions={
-            <Link
-              href="/dashboard/products/add"
-              className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            >
-              Add Medicine
-            </Link>
+            <div className="flex gap-2">
+              <Link
+                href="/dashboard/products/add"
+                className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Add Medicine
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setSuccess("");
+                  setShowReceive(true);
+                }}
+                className="rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500"
+              >
+                Receive Stock
+              </button>
+            </div>
           }
         >
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">
-                Medicines
-              </p>
-
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {metrics.medicines}
-              </p>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Active medicine master
-              </p>
+          {success && (
+            <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              {success}
             </div>
+          )}
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">
-                Total Stock
-              </p>
-
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {metrics.totalStock.toLocaleString(
-                  "en-IN"
-                )}
-              </p>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Units currently available
-              </p>
+          {error && !showReceive && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {error}
             </div>
+          )}
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">
-                Low Stock
-              </p>
+          {showReceive && (
+            <div className="mb-6 rounded-xl border border-cyan-200 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Receive Stock
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Add stock against a medicine batch.
+                  </p>
+                </div>
 
-              <p className="mt-2 text-3xl font-bold text-amber-600">
-                {metrics.lowStock}
-              </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReceive(false);
+                    setError("");
+                    setForm(emptyForm);
+                  }}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+              </div>
 
-              <p className="mt-1 text-sm text-slate-500">
-                Reorder attention required
-              </p>
+              {error && (
+                <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <form
+                onSubmit={receiveStock}
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+              >
+                <select
+                  name="medicineId"
+                  value={form.medicineId}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  required
+                >
+                  <option value="">
+                    Select Medicine *
+                  </option>
+
+                  {inventory
+                    .filter(
+                      (item) => item.active
+                    )
+                    .map((item) => (
+                      <option
+                        key={item.id}
+                        value={item.id}
+                      >
+                        {item.medicineName} —{" "}
+                        {item.code}
+                      </option>
+                    ))}
+                </select>
+
+                <input
+                  name="batchNumber"
+                  placeholder="Batch Number *"
+                  value={form.batchNumber}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  required
+                />
+
+                <input
+                  name="expiryDate"
+                  type="date"
+                  value={form.expiryDate}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  required
+                />
+
+                <input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Quantity *"
+                  value={form.quantity}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  required
+                />
+
+                <input
+                  name="purchasePrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Purchase Price"
+                  value={form.purchasePrice}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                />
+
+                <input
+                  name="sellingPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Selling Price"
+                  value={form.sellingPrice}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                />
+
+                <input
+                  name="mrp"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="MRP"
+                  value={form.mrp}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                />
+
+                <input
+                  name="reference"
+                  placeholder="Reference / Invoice No."
+                  value={form.reference}
+                  onChange={handleChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                />
+
+                <textarea
+                  name="remarks"
+                  placeholder="Remarks"
+                  value={form.remarks}
+                  onChange={handleChange}
+                  rows={1}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                />
+
+                <div className="flex items-center gap-3 md:col-span-2 lg:col-span-3">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saving
+                      ? "Receiving..."
+                      : "Receive Stock"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReceive(false);
+                      setError("");
+                      setForm(emptyForm);
+                    }}
+                    className="rounded-lg border border-slate-300 px-6 py-3 text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
+          )}
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">
-                Expiring Soon
-              </p>
+          <div className="mb-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <Metric
+              label="Medicines"
+              value={metrics.medicines}
+              description="Active medicine master"
+            />
 
-              <p className="mt-2 text-3xl font-bold text-red-600">
-                {metrics.expiringSoon}
-              </p>
+            <Metric
+              label="Total Stock"
+              value={metrics.totalStock.toLocaleString(
+                "en-IN"
+              )}
+              description="Units currently available"
+            />
 
-              <p className="mt-1 text-sm text-slate-500">
-                Within next 90 days
-              </p>
-            </div>
+            <Metric
+              label="Low Stock"
+              value={metrics.lowStock}
+              description="Reorder attention required"
+              warning
+            />
+
+            <Metric
+              label="Expiring Soon"
+              value={metrics.expiringSoon}
+              description="Within next 90 days"
+              danger
+            />
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -247,7 +550,6 @@ export default function InventoryPage() {
                 <h2 className="text-lg font-semibold text-slate-900">
                   Current Inventory
                 </h2>
-
                 <p className="text-sm text-slate-500">
                   Stock position by medicine and batch.
                 </p>
@@ -256,7 +558,7 @@ export default function InventoryPage() {
               <button
                 type="button"
                 onClick={loadInventory}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Refresh
               </button>
@@ -271,7 +573,7 @@ export default function InventoryPage() {
                 )
               }
               placeholder="Search medicine, generic, code or manufacturer..."
-              className="mb-5 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="mb-5 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
             />
 
             <div className="overflow-hidden rounded-xl border border-slate-200">
@@ -279,33 +581,22 @@ export default function InventoryPage() {
                 <table className="min-w-full">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Medicine
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Manufacturer
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Batches
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Stock
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Reorder Level
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Earliest Expiry
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Status
-                      </th>
+                      {[
+                        "Medicine",
+                        "Manufacturer",
+                        "Batches",
+                        "Stock",
+                        "Reorder Level",
+                        "Earliest Expiry",
+                        "Status",
+                      ].map((heading) => (
+                        <th
+                          key={heading}
+                          className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600"
+                        >
+                          {heading}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
 
@@ -343,27 +634,21 @@ export default function InventoryPage() {
                               className="transition hover:bg-slate-50"
                             >
                               <td className="px-5 py-4">
-                                <div className="font-semibold text-slate-900">
-                                  {
-                                    item.medicineName
-                                  }
-                                </div>
+                                <Link
+                                  href={`/dashboard/products/view?id=${item.id}`}
+                                  className="font-semibold text-cyan-700 hover:text-cyan-900"
+                                >
+                                  {item.medicineName}
+                                </Link>
 
                                 <div className="text-xs text-slate-500">
-                                  {
-                                    item.code
-                                  }{" "}
-                                  ·{" "}
-                                  {
-                                    item.packSize
-                                  }
+                                  {item.code} ·{" "}
+                                  {item.packSize}
                                 </div>
                               </td>
 
                               <td className="px-5 py-4 text-sm text-slate-700">
-                                {
-                                  item.manufacturer
-                                }
+                                {item.manufacturer}
                               </td>
 
                               <td className="px-5 py-4 text-sm text-slate-700">
@@ -376,11 +661,11 @@ export default function InventoryPage() {
 
                               <td className="px-5 py-4">
                                 <span
-                                  className={`font-semibold ${
+                                  className={
                                     item.lowStock
-                                      ? "text-amber-600"
-                                      : "text-slate-900"
-                                  }`}
+                                      ? "font-semibold text-amber-600"
+                                      : "font-semibold text-slate-900"
+                                  }
                                 >
                                   {item.totalStock.toLocaleString(
                                     "en-IN"
@@ -389,9 +674,7 @@ export default function InventoryPage() {
                               </td>
 
                               <td className="px-5 py-4 text-sm text-slate-700">
-                                {
-                                  item.reorderLevel
-                                }
+                                {item.reorderLevel}
                               </td>
 
                               <td className="px-5 py-4 text-sm text-slate-700">
@@ -431,5 +714,43 @@ export default function InventoryPage() {
         </ModulePage>
       </AppShell>
     </ProtectedRoute>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  description,
+  warning,
+  danger,
+}: {
+  label: string;
+  value: number | string;
+  description: string;
+  warning?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">
+        {label}
+      </p>
+
+      <p
+        className={`mt-2 text-3xl font-bold ${
+          warning
+            ? "text-amber-600"
+            : danger
+              ? "text-red-600"
+              : "text-slate-900"
+        }`}
+      >
+        {value}
+      </p>
+
+      <p className="mt-1 text-sm text-slate-500">
+        {description}
+      </p>
+    </div>
   );
 }

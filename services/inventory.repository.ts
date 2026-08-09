@@ -24,6 +24,28 @@ export interface CreateMedicinePayload {
   active?: boolean;
 }
 
+export interface UpdateMedicinePayload {
+  medicineName: string;
+  genericName: string;
+  brandName: string;
+  manufacturer: string;
+  category: string;
+  dosageForm: string;
+  strength: string;
+  hsnCode: string;
+  gst: number;
+  purchasePrice: number;
+  sellingPrice: number;
+  mrp: number;
+  packSize: string;
+  reorderLevel?: number;
+  prescriptionRequired?: boolean;
+  drugSchedule: string;
+  retail?: boolean;
+  wholesale?: boolean;
+  active?: boolean;
+}
+
 export interface ReceiveStockPayload {
   medicineId: string;
   batchNumber: string;
@@ -77,7 +99,9 @@ class InventoryRepository {
     });
   }
 
-  async createMedicine(data: CreateMedicinePayload) {
+  async createMedicine(
+    data: CreateMedicinePayload
+  ) {
     return prisma.medicine.create({
       data: {
         code: data.code,
@@ -94,12 +118,51 @@ class InventoryRepository {
         sellingPrice: data.sellingPrice,
         mrp: data.mrp,
         packSize: data.packSize,
-        reorderLevel: data.reorderLevel ?? 0,
+        reorderLevel:
+          data.reorderLevel ?? 0,
         prescriptionRequired:
-          data.prescriptionRequired ?? false,
+          data.prescriptionRequired ??
+          false,
         drugSchedule: data.drugSchedule,
         retail: data.retail ?? true,
-        wholesale: data.wholesale ?? false,
+        wholesale:
+          data.wholesale ?? false,
+        active: data.active ?? true,
+      },
+    });
+  }
+
+  async updateMedicine(
+    id: string,
+    data: UpdateMedicinePayload
+  ) {
+    return prisma.medicine.update({
+      where: {
+        id,
+      },
+      data: {
+        medicineName: data.medicineName,
+        genericName: data.genericName,
+        brandName: data.brandName,
+        manufacturer: data.manufacturer,
+        category: data.category,
+        dosageForm: data.dosageForm,
+        strength: data.strength,
+        hsnCode: data.hsnCode,
+        gst: data.gst,
+        purchasePrice: data.purchasePrice,
+        sellingPrice: data.sellingPrice,
+        mrp: data.mrp,
+        packSize: data.packSize,
+        reorderLevel:
+          data.reorderLevel ?? 0,
+        prescriptionRequired:
+          data.prescriptionRequired ??
+          false,
+        drugSchedule: data.drugSchedule,
+        retail: data.retail ?? true,
+        wholesale:
+          data.wholesale ?? false,
         active: data.active ?? true,
       },
     });
@@ -114,35 +177,65 @@ class InventoryRepository {
   }
 
   async getInventory() {
-    const medicines = await prisma.medicine.findMany({
-      include: {
-        inventoryBatches: {
-          orderBy: {
-            expiryDate: "asc",
+    const medicines =
+      await prisma.medicine.findMany({
+        include: {
+          inventoryBatches: {
+            orderBy: {
+              expiryDate: "asc",
+            },
           },
         },
-      },
-      orderBy: {
-        medicineName: "asc",
-      },
-    });
+        orderBy: {
+          medicineName: "asc",
+        },
+      });
 
     return medicines.map((medicine) => {
       const totalStock =
         medicine.inventoryBatches.reduce(
-          (total, batch) => total + batch.quantity,
+          (total, batch) =>
+            total + batch.quantity,
           0
         );
 
       return {
         ...medicine,
         totalStock,
-        lowStock: totalStock <= medicine.reorderLevel,
+        lowStock:
+          totalStock <=
+          medicine.reorderLevel,
       };
     });
   }
 
-  async getStockBatches(medicineId?: string) {
+  async getStockBatch(id: string) {
+    return prisma.inventoryBatch.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        medicine: true,
+        movements: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      },
+    });
+  }
+
+  async deleteStockBatch(id: string) {
+    return prisma.inventoryBatch.delete({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async getStockBatches(
+    medicineId?: string
+  ) {
     return prisma.inventoryBatch.findMany({
       where: medicineId
         ? {
@@ -163,184 +256,247 @@ class InventoryRepository {
     });
   }
 
-  async receiveStock(data: ReceiveStockPayload) {
+  async receiveStock(
+    data: ReceiveStockPayload
+  ) {
     if (data.quantity <= 0) {
       throw new Error(
         "Stock quantity must be greater than zero."
       );
     }
 
-    return prisma.$transaction(async (tx) => {
-      const medicine = await tx.medicine.findUnique({
-        where: {
-          id: data.medicineId,
-        },
-      });
-
-      if (!medicine) {
-        throw new Error("Medicine not found.");
-      }
-
-      const batch = await tx.inventoryBatch.upsert({
-        where: {
-          medicineId_batchNumber: {
-            medicineId: data.medicineId,
-            batchNumber: data.batchNumber,
-          },
-        },
-        create: {
-          medicineId: data.medicineId,
-          batchNumber: data.batchNumber,
-          expiryDate: data.expiryDate,
-          quantity: data.quantity,
-          purchasePrice: data.purchasePrice,
-          sellingPrice: data.sellingPrice,
-          mrp: data.mrp,
-        },
-        update: {
-          expiryDate: data.expiryDate,
-          quantity: {
-            increment: data.quantity,
-          },
-          purchasePrice: data.purchasePrice,
-          sellingPrice: data.sellingPrice,
-          mrp: data.mrp,
-        },
-      });
-
-      await tx.stockMovement.create({
-        data: {
-          inventoryBatchId: batch.id,
-          type: StockMovementType.RECEIPT,
-          quantity: data.quantity,
-          reference: data.reference,
-          remarks: data.remarks,
-          createdBy: data.createdBy,
-        },
-      });
-
-      return tx.inventoryBatch.findUnique({
-        where: {
-          id: batch.id,
-        },
-        include: {
-          medicine: true,
-          movements: {
-            orderBy: {
-              createdAt: "desc",
+    return prisma.$transaction(
+      async (tx) => {
+        const medicine =
+          await tx.medicine.findUnique({
+            where: {
+              id: data.medicineId,
             },
+          });
+
+        if (!medicine) {
+          throw new Error(
+            "Medicine not found."
+          );
+        }
+
+        const batch =
+          await tx.inventoryBatch.upsert({
+            where: {
+              medicineId_batchNumber: {
+                medicineId:
+                  data.medicineId,
+                batchNumber:
+                  data.batchNumber,
+              },
+            },
+            create: {
+              medicineId:
+                data.medicineId,
+              batchNumber:
+                data.batchNumber,
+              expiryDate:
+                data.expiryDate,
+              quantity:
+                data.quantity,
+              purchasePrice:
+                data.purchasePrice,
+              sellingPrice:
+                data.sellingPrice,
+              mrp: data.mrp,
+            },
+            update: {
+              expiryDate:
+                data.expiryDate,
+              quantity: {
+                increment:
+                  data.quantity,
+              },
+              purchasePrice:
+                data.purchasePrice,
+              sellingPrice:
+                data.sellingPrice,
+              mrp: data.mrp,
+            },
+          });
+
+        await tx.stockMovement.create({
+          data: {
+            inventoryBatchId:
+              batch.id,
+            type: StockMovementType.RECEIPT,
+            quantity: data.quantity,
+            reference:
+              data.reference,
+            remarks: data.remarks,
+            createdBy:
+              data.createdBy,
           },
-        },
-      });
-    });
+        });
+
+        return tx.inventoryBatch.findUnique(
+          {
+            where: {
+              id: batch.id,
+            },
+            include: {
+              medicine: true,
+              movements: {
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
+          }
+        );
+      }
+    );
   }
 
-  async issueStock(data: StockIssuePayload) {
+  async issueStock(
+    data: StockIssuePayload
+  ) {
     if (data.quantity <= 0) {
       throw new Error(
         "Issue quantity must be greater than zero."
       );
     }
 
-    return prisma.$transaction(async (tx) => {
-      const batch = await tx.inventoryBatch.findUnique({
-        where: {
-          id: data.batchId,
-        },
-      });
+    return prisma.$transaction(
+      async (tx) => {
+        const batch =
+          await tx.inventoryBatch.findUnique(
+            {
+              where: {
+                id: data.batchId,
+              },
+            }
+          );
 
-      if (!batch) {
-        throw new Error("Inventory batch not found.");
-      }
+        if (!batch) {
+          throw new Error(
+            "Inventory batch not found."
+          );
+        }
 
-      if (batch.quantity < data.quantity) {
-        throw new Error("Insufficient stock.");
-      }
+        if (
+          batch.quantity <
+          data.quantity
+        ) {
+          throw new Error(
+            "Insufficient stock."
+          );
+        }
 
-      const updatedBatch =
-        await tx.inventoryBatch.update({
-          where: {
-            id: data.batchId,
-          },
+        const updatedBatch =
+          await tx.inventoryBatch.update(
+            {
+              where: {
+                id: data.batchId,
+              },
+              data: {
+                quantity: {
+                  decrement:
+                    data.quantity,
+                },
+              },
+            }
+          );
+
+        await tx.stockMovement.create({
           data: {
-            quantity: {
-              decrement: data.quantity,
-            },
+            inventoryBatchId:
+              data.batchId,
+            type: StockMovementType.ISSUE,
+            quantity: data.quantity,
+            reference:
+              data.reference,
+            remarks: data.remarks,
+            createdBy:
+              data.createdBy,
           },
         });
 
-      await tx.stockMovement.create({
-        data: {
-          inventoryBatchId: data.batchId,
-          type: StockMovementType.ISSUE,
-          quantity: data.quantity,
-          reference: data.reference,
-          remarks: data.remarks,
-          createdBy: data.createdBy,
-        },
-      });
-
-      return updatedBatch;
-    });
+        return updatedBatch;
+      }
+    );
   }
 
-  async adjustStock(data: StockAdjustmentPayload) {
+  async adjustStock(
+    data: StockAdjustmentPayload
+  ) {
     if (data.quantity === 0) {
       throw new Error(
         "Adjustment quantity cannot be zero."
       );
     }
 
-    return prisma.$transaction(async (tx) => {
-      const batch = await tx.inventoryBatch.findUnique({
-        where: {
-          id: data.batchId,
-        },
-      });
+    return prisma.$transaction(
+      async (tx) => {
+        const batch =
+          await tx.inventoryBatch.findUnique(
+            {
+              where: {
+                id: data.batchId,
+              },
+            }
+          );
 
-      if (!batch) {
-        throw new Error("Inventory batch not found.");
-      }
+        if (!batch) {
+          throw new Error(
+            "Inventory batch not found."
+          );
+        }
 
-      const newQuantity =
-        batch.quantity + data.quantity;
+        const newQuantity =
+          batch.quantity +
+          data.quantity;
 
-      if (newQuantity < 0) {
-        throw new Error(
-          "Stock adjustment cannot make inventory negative."
-        );
-      }
+        if (newQuantity < 0) {
+          throw new Error(
+            "Stock adjustment cannot make inventory negative."
+          );
+        }
 
-      const updatedBatch =
-        await tx.inventoryBatch.update({
-          where: {
-            id: data.batchId,
-          },
+        const updatedBatch =
+          await tx.inventoryBatch.update(
+            {
+              where: {
+                id: data.batchId,
+              },
+              data: {
+                quantity: newQuantity,
+              },
+            }
+          );
+
+        await tx.stockMovement.create({
           data: {
-            quantity: newQuantity,
+            inventoryBatchId:
+              data.batchId,
+            type: StockMovementType.ADJUSTMENT,
+            quantity: data.quantity,
+            reference:
+              data.reference,
+            remarks: data.remarks,
+            createdBy:
+              data.createdBy,
           },
         });
 
-      await tx.stockMovement.create({
-        data: {
-          inventoryBatchId: data.batchId,
-          type: StockMovementType.ADJUSTMENT,
-          quantity: data.quantity,
-          reference: data.reference,
-          remarks: data.remarks,
-          createdBy: data.createdBy,
-        },
-      });
-
-      return updatedBatch;
-    });
+        return updatedBatch;
+      }
+    );
   }
 
-  async getStockMovements(batchId?: string) {
+  async getStockMovements(
+    batchId?: string
+  ) {
     return prisma.stockMovement.findMany({
       where: batchId
         ? {
-            inventoryBatchId: batchId,
+            inventoryBatchId:
+              batchId,
           }
         : undefined,
       include: {
