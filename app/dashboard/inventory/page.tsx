@@ -42,6 +42,14 @@ interface StockForm {
   remarks: string;
 }
 
+interface IssueForm {
+  medicineId: string;
+  batchId: string;
+  quantity: string;
+  reference: string;
+  remarks: string;
+}
+
 const emptyForm: StockForm = {
   medicineId: "",
   batchNumber: "",
@@ -54,6 +62,14 @@ const emptyForm: StockForm = {
   remarks: "",
 };
 
+const emptyIssueForm: IssueForm = {
+  medicineId: "",
+  batchId: "",
+  quantity: "",
+  reference: "",
+  remarks: "",
+};
+
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<
     InventoryMedicine[]
@@ -61,13 +77,27 @@ export default function InventoryPage() {
 
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
   const [showReceive, setShowReceive] =
     useState(false);
+
+  const [showIssue, setShowIssue] =
+    useState(false);
+
   const [form, setForm] =
     useState<StockForm>(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+
+  const [issueForm, setIssueForm] =
+    useState<IssueForm>(emptyIssueForm);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
 
   useEffect(() => {
     loadInventory();
@@ -84,7 +114,10 @@ export default function InventoryPage() {
       const result =
         await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
             "Unable to load inventory."
@@ -97,6 +130,7 @@ export default function InventoryPage() {
         "Failed to load inventory.",
         error
       );
+
       setInventory([]);
     } finally {
       setLoading(false);
@@ -130,23 +164,26 @@ export default function InventoryPage() {
   }, [inventory, search]);
 
   const metrics = useMemo(() => {
-    const totalStock = inventory.reduce(
-      (total, item) =>
-        total + item.totalStock,
-      0
-    );
+    const totalStock =
+      inventory.reduce(
+        (total, item) =>
+          total + item.totalStock,
+        0
+      );
 
-    const lowStock = inventory.filter(
-      (item) => item.lowStock
-    ).length;
+    const lowStock =
+      inventory.filter(
+        (item) => item.lowStock
+      ).length;
 
-    const expiringSoon = inventory.filter(
-      (item) =>
+    const expiringSoon =
+      inventory.filter((item) =>
         item.inventoryBatches.some(
           (batch) => {
-            const expiry = new Date(
-              batch.expiryDate
-            );
+            const expiry =
+              new Date(
+                batch.expiryDate
+              );
 
             const days =
               (expiry.getTime() -
@@ -160,7 +197,7 @@ export default function InventoryPage() {
             );
           }
         )
-    ).length;
+      ).length;
 
     return {
       medicines: inventory.length,
@@ -170,10 +207,37 @@ export default function InventoryPage() {
     };
   }, [inventory]);
 
+  const selectedIssueMedicine =
+    inventory.find(
+      (item) =>
+        item.id ===
+        issueForm.medicineId
+    );
+
+  const availableIssueBatches =
+    selectedIssueMedicine?.inventoryBatches.filter(
+      (batch) => {
+        const expiry =
+          new Date(batch.expiryDate);
+
+        return (
+          batch.quantity > 0 &&
+          expiry.getTime() > Date.now()
+        );
+      }
+    ) ?? [];
+
+  const selectedIssueBatch =
+    selectedIssueMedicine?.inventoryBatches.find(
+      (batch) =>
+        batch.id === issueForm.batchId
+    );
+
   function formatExpiry(date: string) {
     return new Date(
       date
     ).toLocaleDateString("en-IN", {
+      day: "2-digit",
       month: "short",
       year: "numeric",
     });
@@ -181,7 +245,9 @@ export default function InventoryPage() {
 
   function handleChange(
     event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      HTMLInputElement |
+        HTMLTextAreaElement |
+        HTMLSelectElement
     >
   ) {
     const { name, value } =
@@ -190,6 +256,25 @@ export default function InventoryPage() {
     setForm((previous) => ({
       ...previous,
       [name]: value,
+    }));
+  }
+
+  function handleIssueChange(
+    event: React.ChangeEvent<
+      HTMLInputElement |
+        HTMLTextAreaElement |
+        HTMLSelectElement
+    >
+  ) {
+    const { name, value } =
+      event.target;
+
+    setIssueForm((previous) => ({
+      ...previous,
+      [name]: value,
+      ...(name === "medicineId"
+        ? { batchId: "" }
+        : {}),
     }));
   }
 
@@ -213,7 +298,8 @@ export default function InventoryPage() {
       return;
     }
 
-    const quantity = Number(form.quantity);
+    const quantity =
+      Number(form.quantity);
 
     if (
       !Number.isInteger(quantity) ||
@@ -244,15 +330,15 @@ export default function InventoryPage() {
             expiryDate:
               form.expiryDate,
             quantity,
-            purchasePrice:
-              Number(
-                form.purchasePrice || 0
-              ),
-            sellingPrice:
-              Number(
-                form.sellingPrice || 0
-              ),
-            mrp: Number(form.mrp || 0),
+            purchasePrice: Number(
+              form.purchasePrice || 0
+            ),
+            sellingPrice: Number(
+              form.sellingPrice || 0
+            ),
+            mrp: Number(
+              form.mrp || 0
+            ),
             reference:
               form.reference.trim() ||
               undefined,
@@ -300,6 +386,144 @@ export default function InventoryPage() {
     }
   }
 
+  async function issueStock(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (
+      !issueForm.medicineId ||
+      !issueForm.batchId ||
+      !issueForm.quantity
+    ) {
+      setError(
+        "Medicine, batch and quantity are required."
+      );
+      return;
+    }
+
+    const quantity =
+      Number(issueForm.quantity);
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    ) {
+      setError(
+        "Issue quantity must be a positive whole number."
+      );
+      return;
+    }
+
+    if (!selectedIssueBatch) {
+      setError(
+        "Please select a valid inventory batch."
+      );
+      return;
+    }
+
+    const expiry =
+      new Date(
+        selectedIssueBatch.expiryDate
+      );
+
+    if (
+      expiry.getTime() <= Date.now()
+    ) {
+      setError(
+        "Expired stock cannot be issued."
+      );
+      return;
+    }
+
+    if (
+      quantity >
+      selectedIssueBatch.quantity
+    ) {
+      setError(
+        `Only ${selectedIssueBatch.quantity} units are available in this batch.`
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const response = await fetch(
+        "/api/inventory/movements",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            batchId:
+              issueForm.batchId,
+            type: "ISSUE",
+            quantity,
+            reference:
+              issueForm.reference.trim() ||
+              undefined,
+            remarks:
+              issueForm.remarks.trim() ||
+              undefined,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to issue stock."
+        );
+      }
+
+      setSuccess(
+        `Stock issued successfully. ${quantity} units removed from inventory.`
+      );
+
+      setIssueForm(emptyIssueForm);
+      setShowIssue(false);
+
+      await loadInventory();
+    } catch (error) {
+      console.error(
+        "Failed to issue stock.",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to issue stock."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function closeReceive() {
+    setShowReceive(false);
+    setError("");
+    setForm(emptyForm);
+  }
+
+  function closeIssue() {
+    setShowIssue(false);
+    setError("");
+    setIssueForm(emptyIssueForm);
+  }
+
   return (
     <ProtectedRoute
       allowedRoles={[
@@ -312,7 +536,7 @@ export default function InventoryPage() {
           title="Inventory Management"
           description="Monitor medicine stock, batches, expiry and reorder requirements."
           actions={
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link
                 href="/dashboard/products/add"
                 className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -325,11 +549,25 @@ export default function InventoryPage() {
                 onClick={() => {
                   setError("");
                   setSuccess("");
+                  setShowIssue(false);
                   setShowReceive(true);
                 }}
                 className="rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500"
               >
                 Receive Stock
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setSuccess("");
+                  setShowReceive(false);
+                  setShowIssue(true);
+                }}
+                className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-500"
+              >
+                Issue Stock
               </button>
             </div>
           }
@@ -340,11 +578,13 @@ export default function InventoryPage() {
             </div>
           )}
 
-          {error && !showReceive && (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </div>
-          )}
+          {error &&
+            !showReceive &&
+            !showIssue && (
+              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
 
           {showReceive && (
             <div className="mb-6 rounded-xl border border-cyan-200 bg-white p-6 shadow-sm">
@@ -353,6 +593,7 @@ export default function InventoryPage() {
                   <h2 className="text-lg font-semibold text-slate-900">
                     Receive Stock
                   </h2>
+
                   <p className="text-sm text-slate-500">
                     Add stock against a medicine batch.
                   </p>
@@ -360,11 +601,7 @@ export default function InventoryPage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowReceive(false);
-                    setError("");
-                    setForm(emptyForm);
-                  }}
+                  onClick={closeReceive}
                   className="text-sm font-medium text-slate-500 hover:text-slate-900"
                 >
                   Cancel
@@ -500,11 +737,175 @@ export default function InventoryPage() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowReceive(false);
-                      setError("");
-                      setForm(emptyForm);
-                    }}
+                    onClick={closeReceive}
+                    className="rounded-lg border border-slate-300 px-6 py-3 text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {showIssue && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Issue Stock
+                  </h2>
+
+                  <p className="text-sm text-slate-500">
+                    Remove stock from an active, non-expired batch.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeIssue}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <form
+                onSubmit={issueStock}
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+              >
+                <select
+                  name="medicineId"
+                  value={issueForm.medicineId}
+                  onChange={handleIssueChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  required
+                >
+                  <option value="">
+                    Select Medicine *
+                  </option>
+
+                  {inventory
+                    .filter(
+                      (item) =>
+                        item.active &&
+                        item.totalStock > 0
+                    )
+                    .map((item) => (
+                      <option
+                        key={item.id}
+                        value={item.id}
+                      >
+                        {item.medicineName} — Stock:{" "}
+                        {item.totalStock}
+                      </option>
+                    ))}
+                </select>
+
+                <select
+                  name="batchId"
+                  value={issueForm.batchId}
+                  onChange={handleIssueChange}
+                  disabled={
+                    !issueForm.medicineId
+                  }
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:bg-slate-100 disabled:text-slate-400"
+                  required
+                >
+                  <option value="">
+                    Select Batch *
+                  </option>
+
+                  {availableIssueBatches.map(
+                    (batch) => (
+                      <option
+                        key={batch.id}
+                        value={batch.id}
+                      >
+                        {batch.batchNumber} —{" "}
+                        {batch.quantity} units — Exp:{" "}
+                        {formatExpiry(
+                          batch.expiryDate
+                        )}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                <input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  step="1"
+                  max={
+                    selectedIssueBatch?.quantity ??
+                    undefined
+                  }
+                  placeholder="Issue Quantity *"
+                  value={issueForm.quantity}
+                  onChange={handleIssueChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  required
+                />
+
+                <input
+                  name="reference"
+                  placeholder="Reference / Invoice / Sale No."
+                  value={issueForm.reference}
+                  onChange={handleIssueChange}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                />
+
+                <textarea
+                  name="remarks"
+                  placeholder="Reason / Remarks"
+                  value={issueForm.remarks}
+                  onChange={handleIssueChange}
+                  rows={1}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                />
+
+                {selectedIssueBatch && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                    <p className="font-semibold text-slate-900">
+                      Available Stock
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold text-slate-900">
+                      {selectedIssueBatch.quantity.toLocaleString(
+                        "en-IN"
+                      )}{" "}
+                      units
+                    </p>
+
+                    <p className="text-slate-500">
+                      Expiry:{" "}
+                      {formatExpiry(
+                        selectedIssueBatch.expiryDate
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 md:col-span-2 lg:col-span-3">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saving
+                      ? "Issuing..."
+                      : "Issue Stock"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={closeIssue}
                     className="rounded-lg border border-slate-300 px-6 py-3 text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
@@ -550,6 +951,7 @@ export default function InventoryPage() {
                 <h2 className="text-lg font-semibold text-slate-900">
                   Current Inventory
                 </h2>
+
                 <p className="text-sm text-slate-500">
                   Stock position by medicine and batch.
                 </p>

@@ -19,30 +19,96 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (payload: LoginRequest) => Promise<AuthUser>;
+  login: (
+    payload: LoginRequest
+  ) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(
-  undefined
-);
+const AuthContext =
+  createContext<AuthContextType | undefined>(
+    undefined
+  );
 
-const ACCESS_TOKEN_KEY = "shifa_access_token";
-const REFRESH_TOKEN_KEY = "shifa_refresh_token";
+const ACCESS_TOKEN_KEY =
+  "shifa_access_token";
+
+const REFRESH_TOKEN_KEY =
+  "shifa_refresh_token";
 
 export function AuthProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] =
+    useState<AuthUser | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  async function refreshAccessToken(): Promise<string> {
+    const refreshToken =
+      localStorage.getItem(
+        REFRESH_TOKEN_KEY
+      );
+
+    if (!refreshToken) {
+      throw new Error(
+        "Refresh token not found."
+      );
+    }
+
+    const response =
+      await authService.refreshToken(
+        refreshToken
+      );
+
+    if (
+      !response.success ||
+      !response.accessToken
+    ) {
+      throw new Error(
+        response.message ??
+          "Unable to refresh access token."
+      );
+    }
+
+    localStorage.setItem(
+      ACCESS_TOKEN_KEY,
+      response.accessToken
+    );
+
+    return response.accessToken;
+  }
+
+  async function fetchCurrentUser(
+    accessToken: string
+  ) {
+    const response = await fetch(
+      "/api/auth/me",
+      {
+        headers: {
+          Authorization:
+            `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    return {
+      response,
+      data,
+    };
+  }
 
   async function refreshUser() {
-    const accessToken = localStorage.getItem(
-      ACCESS_TOKEN_KEY
-    );
+    let accessToken =
+      localStorage.getItem(
+        ACCESS_TOKEN_KEY
+      );
 
     if (!accessToken) {
       setUser(null);
@@ -50,34 +116,63 @@ export function AuthProvider({
     }
 
     try {
-      const response = await fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      let result =
+        await fetchCurrentUser(
+          accessToken
+        );
 
-      const data = await response.json();
+      if (
+        result.response.status === 401
+      ) {
+        accessToken =
+          await refreshAccessToken();
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message);
+        result =
+          await fetchCurrentUser(
+            accessToken
+          );
       }
 
-      setUser(data.user);
-    } catch {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      if (
+        !result.response.ok ||
+        !result.data.success
+      ) {
+        throw new Error(
+          result.data.message ||
+            "Unable to load current user."
+        );
+      }
+
+      setUser(result.data.user);
+    } catch (error) {
+      console.error(
+        "Failed to refresh user session.",
+        error
+      );
+
+      localStorage.removeItem(
+        ACCESS_TOKEN_KEY
+      );
+
+      localStorage.removeItem(
+        REFRESH_TOKEN_KEY
+      );
+
       setUser(null);
     }
   }
 
   useEffect(() => {
-    refreshUser().finally(() => setLoading(false));
+    refreshUser().finally(() =>
+      setLoading(false)
+    );
   }, []);
 
   async function login(
     payload: LoginRequest
   ): Promise<AuthUser> {
-    const response = await authService.login(payload);
+    const response =
+      await authService.login(payload);
 
     if (
       !response.success ||
@@ -86,7 +181,8 @@ export function AuthProvider({
       !response.refreshToken
     ) {
       throw new Error(
-        response.message ?? "Login failed."
+        response.message ??
+          "Login failed."
       );
     }
 
@@ -110,8 +206,13 @@ export function AuthProvider({
       await authService.logout();
     } catch {}
 
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(
+      ACCESS_TOKEN_KEY
+    );
+
+    localStorage.removeItem(
+      REFRESH_TOKEN_KEY
+    );
 
     setUser(null);
   }
@@ -133,7 +234,8 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
     throw new Error(

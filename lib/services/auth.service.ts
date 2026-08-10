@@ -22,7 +22,9 @@ async function request<T>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Request failed");
+    throw new Error(
+      data.message || "Request failed"
+    );
   }
 
   return data;
@@ -49,38 +51,58 @@ export function register(
 export function forgotPassword(
   payload: ForgotPasswordRequest
 ): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/forgot-password", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return request<AuthResponse>(
+    "/api/auth/forgot-password",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export function verifyOtp(
   payload: VerifyOtpRequest
 ): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/verify-otp", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return request<AuthResponse>(
+    "/api/auth/verify-otp",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export function resetPassword(
   payload: ResetPasswordRequest
 ): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/reset-password", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return request<AuthResponse>(
+    "/api/auth/reset-password",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
-export function refreshToken(): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/refresh", {
-    method: "POST",
-  });
+export function refreshToken(
+  refreshTokenValue: string
+): Promise<AuthResponse> {
+  return request<AuthResponse>(
+    "/api/auth/refresh",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${refreshTokenValue}`,
+      },
+    }
+  );
 }
 
 export function logout(): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/logout", {
-    method: "POST",
-  });
+  return request<AuthResponse>(
+    "/api/auth/logout",
+    {
+      method: "POST",
+    }
+  );
 }

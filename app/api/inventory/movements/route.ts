@@ -82,10 +82,8 @@ export async function POST(
       );
     }
 
-    let result;
-
     switch (body.type) {
-      case "ISSUE":
+      case "ISSUE": {
         if (quantity < 0) {
           return NextResponse.json(
             {
@@ -97,7 +95,61 @@ export async function POST(
           );
         }
 
-        result =
+        const batch =
+          await inventoryRepository.getStockBatch(
+            body.batchId
+          );
+
+        if (!batch) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Inventory batch not found.",
+            },
+            { status: 404 }
+          );
+        }
+
+        const now = new Date();
+
+        if (
+          batch.expiryDate.getTime() <=
+          now.getTime()
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Expired stock cannot be issued.",
+            },
+            { status: 409 }
+          );
+        }
+
+        if (batch.quantity <= 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "This batch has no available stock.",
+            },
+            { status: 409 }
+          );
+        }
+
+        if (quantity > batch.quantity) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                `Only ${batch.quantity} units are available in this batch.`,
+            },
+            { status: 409 }
+          );
+        }
+
+        const result =
           await inventoryRepository.issueStock({
             batchId: body.batchId,
             quantity,
@@ -108,10 +160,17 @@ export async function POST(
             createdBy:
               body.createdBy,
           });
-        break;
 
-      case "ADJUSTMENT":
-        result =
+        return NextResponse.json({
+          success: true,
+          message:
+            "Stock issued successfully.",
+          data: result,
+        });
+      }
+
+      case "ADJUSTMENT": {
+        const result =
           await inventoryRepository.adjustStock({
             batchId: body.batchId,
             quantity,
@@ -122,7 +181,14 @@ export async function POST(
             createdBy:
               body.createdBy,
           });
-        break;
+
+        return NextResponse.json({
+          success: true,
+          message:
+            "Stock adjusted successfully.",
+          data: result,
+        });
+      }
 
       default:
         return NextResponse.json(
@@ -134,15 +200,6 @@ export async function POST(
           { status: 400 }
         );
     }
-
-    return NextResponse.json({
-      success: true,
-      message:
-        body.type === "ISSUE"
-          ? "Stock issued successfully."
-          : "Stock adjusted successfully.",
-      data: result,
-    });
   } catch (error) {
     console.error(
       "Failed to process stock movement.",
