@@ -1,108 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import { DOCTORS } from "@/constants/doctors";
-import { DOCTOR_AVAILABILITY } from "@/constants/doctorAvailability";
+import { useEffect, useState } from "react";
+
+import { useAuth } from "@/context/AuthContext";
+import { DoctorsService } from "@/modules/doctors/services/doctors.service";
+
+import type { Doctor } from "@/types/doctor.types";
+import type { ConsultationMode } from "@/types/booking";
+
 import StepDoctor from "./StepDoctor";
-import StepSchedule from "./StepSchedule";
-import StepPatient from "./StepPatient";
 import StepReview from "./StepReview";
 
 export default function AppointmentWizard() {
+  const { user } = useAuth();
+
   const [step, setStep] = useState(1);
 
-  const [doctorId, setDoctorId] = useState<number | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [doctorError, setDoctorError] = useState("");
 
-  const [date, setDate] = useState("");
-  const [slot, setSlot] = useState("");
+  const [doctorId, setDoctorId] =
+    useState<string | null>(null);
 
-  const [patient, setPatient] = useState({
-    fullName: "",
-    mobile: "",
-    alternateMobile: "",
-    email: "",
-    age: "",
-    gender: "",
-    city: "",
-  });
+  const [consultationMode, setConsultationMode] =
+    useState<ConsultationMode | "">("");
 
-  const doctor = DOCTORS.find(
-    (d) => d.id === doctorId
-  );
+  useEffect(() => {
+    let mounted = true;
 
-  const availability =
-    DOCTOR_AVAILABILITY.find(
-      (d) => d.doctorId === doctorId
-    )?.dates ?? [];
+    async function loadDoctors() {
+      try {
+        setLoadingDoctors(true);
+        setDoctorError("");
 
-  const hasAvailability =
-    availability.length > 0;
+        const response =
+          await DoctorsService.getDoctors();
 
-  function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement
-    >
-  ) {
-    setPatient((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  }
+        if (!mounted) return;
 
-  if (step === 1)
+        setDoctors(
+          response.doctors.filter(
+            (doctor) => doctor.status === "Active"
+          )
+        );
+      } catch (error) {
+        console.error(error);
+
+        if (mounted) {
+          setDoctorError(
+            "Unable to load doctors. Please try again."
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoadingDoctors(false);
+        }
+      }
+    }
+
+    loadDoctors();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const doctor =
+    doctors.find(
+      (item) => item.id === doctorId
+    ) ?? null;
+
+  if (step === 1) {
     return (
       <StepDoctor
+        doctors={doctors}
         selectedDoctor={doctorId}
+        consultationMode={consultationMode}
+        loading={loadingDoctors}
+        error={doctorError}
         onSelect={(id) => {
           setDoctorId(id);
-          setDate("");
-          setSlot("");
         }}
-        onNext={() => {
-          if (hasAvailability) {
-            setStep(2);
-          } else {
-            setStep(3);
-          }
-        }}
-      />
-    );
-
-  if (step === 2)
-    return (
-      <StepSchedule
-        availableDates={availability}
-        date={date}
-        slot={slot}
-        onDateChange={setDate}
-        onSlotChange={setSlot}
-        onBack={() => setStep(1)}
-        onNext={() => setStep(3)}
-      />
-    );
-
-  if (step === 3)
-    return (
-      <StepPatient
-        data={patient}
-        onChange={handleChange}
-        onBack={() =>
-          setStep(hasAvailability ? 2 : 1)
+        onConsultationModeChange={
+          setConsultationMode
         }
-        onNext={() => setStep(4)}
+        onNext={() => setStep(2)}
       />
     );
+  }
 
   return (
     <StepReview
       doctor={doctor}
-      date={date}
-      slot={slot}
-      hasAvailability={hasAvailability}
-      patient={patient}
-      onBack={() =>
-        setStep(hasAvailability ? 3 : 3)
-      }
+      consultationMode={consultationMode}
+      patient={{
+        fullName: user?.name ?? "",
+        mobile: user?.phone ?? "",
+        email: user?.email ?? "",
+      }}
+      onBack={() => setStep(1)}
     />
   );
 }

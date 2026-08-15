@@ -1,10 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import bookingRepository from "@/services/booking.repository";
 
 interface RouteParams {
   params: Promise<{
     id: string;
   }>;
+}
+
+function normalizeBooking(booking: any) {
+  const patientName = [
+    booking.patient?.firstName,
+    booking.patient?.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    ...booking,
+
+    customer: {
+      fullName:
+        booking.customerName ||
+        patientName ||
+        "",
+
+      mobile:
+        booking.customerPhone ||
+        booking.patient?.phone ||
+        "",
+
+      email:
+        booking.customerEmail ||
+        booking.patient?.email ||
+        "",
+    },
+  };
 }
 
 export async function POST(
@@ -35,19 +66,21 @@ export async function POST(
       );
     }
 
-    const booking = await bookingRepository.scheduleBooking(
-      id,
-      new Date(body.scheduledOn),
-      body.session,
-      body.assignedTo,
-      body.notes
-    );
+    const booking =
+      await bookingRepository.scheduleBooking(
+        id,
+        new Date(body.scheduledOn),
+        body.session,
+        body.assignedTo,
+        body.notes
+      );
 
     return NextResponse.json(
       {
         success: true,
-        message: "Booking scheduled successfully.",
-        data: booking,
+        message:
+          "Booking scheduled successfully.",
+        data: normalizeBooking(booking),
       },
       { status: 201 }
     );
@@ -57,7 +90,8 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        message: "Unable to schedule booking.",
+        message:
+          "Unable to schedule booking.",
       },
       { status: 500 }
     );

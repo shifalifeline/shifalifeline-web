@@ -2,96 +2,151 @@
 
 import { useState } from "react";
 
+import bookingApi from "@/services/booking.api";
+
+import type {
+  ConsultationMode,
+} from "@/types/booking";
+
+import type { Doctor } from "@/types/doctor.types";
+
 interface Props {
-  doctor: any;
-  date: string;
-  slot: string;
-  hasAvailability: boolean;
+  doctor: Doctor | null;
+  consultationMode: ConsultationMode | "";
   patient: {
     fullName: string;
     mobile: string;
-    alternateMobile: string;
     email: string;
-    age: string;
-    gender: string;
-    city: string;
   };
   onBack: () => void;
 }
 
 export default function StepReview({
   doctor,
-  date,
-  slot,
-  hasAvailability,
+  consultationMode,
   patient,
   onBack,
 }: Props) {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] =
+    useState(false);
 
-  const [reference] = useState(() => {
-    const value = Date.now().toString().slice(-6);
-    return hasAvailability
-      ? `SHF-${value}`
-      : `TK-${value}`;
-  });
+  const [bookingId, setBookingId] =
+    useState("");
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  async function handleSubmit() {
+    if (!doctor || !consultationMode) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+
+      const response =
+        await bookingApi.createBooking({
+          type: "APPOINTMENT",
+
+          title:
+            consultationMode === "VIDEO"
+              ? "Telemedicine Consultation"
+              : "Doctor Appointment",
+
+          customer: {
+            fullName: patient.fullName,
+            mobile: patient.mobile,
+            email: patient.email || undefined,
+          },
+
+          requestData: {
+            doctorId: doctor.id,
+            consultationMode,
+          },
+        });
+
+      if (!response.success) {
+        throw new Error(
+          response.message
+        );
+      }
+
+      setBookingId(
+        response.data.reference
+      );
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to submit appointment request. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (submitted) {
     return (
       <div className="space-y-6 text-center">
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-8">
-          <div className="mb-4 text-6xl">✅</div>
+          <div className="mb-4 text-6xl">
+            ✅
+          </div>
 
           <h2 className="text-3xl font-bold text-emerald-700">
-            {hasAvailability
-              ? "Appointment Request Submitted"
-              : "Callback Request Submitted"}
+            Appointment Request Submitted
           </h2>
 
           <div className="mt-6 rounded-lg border bg-white p-5 text-left">
             <p>
-              <strong>
-                {hasAvailability
-                  ? "Booking ID"
-                  : "Token Number"}
-                :
-              </strong>{" "}
-              {reference}
+              <strong>Booking ID:</strong>{" "}
+              {bookingId}
             </p>
 
             <p>
               <strong>Status:</strong>{" "}
-              {hasAvailability
-                ? "Pending Confirmation"
-                : "Callback Pending"}
+              Pending Confirmation
             </p>
 
             <p>
               <strong>Doctor:</strong>{" "}
-              {doctor?.name}
+              {doctor?.firstName}{" "}
+              {doctor?.lastName}
             </p>
 
-            {hasAvailability && (
-              <>
-                <p>
-                  <strong>Date:</strong> {date}
-                </p>
+            <p>
+              <strong>Consultation:</strong>{" "}
+              {consultationMode === "VIDEO"
+                ? "Video Consultation"
+                : "Physical Consultation"}
+            </p>
 
-                <p>
-                  <strong>
-                    Preferred Session:
-                  </strong>{" "}
-                  {slot}
-                </p>
-              </>
-            )}
+            <p>
+              <strong>Patient:</strong>{" "}
+              {patient.fullName}
+            </p>
+
+            <p>
+              <strong>Mobile:</strong>{" "}
+              {patient.mobile}
+            </p>
           </div>
 
           <div className="mt-6 rounded-lg bg-cyan-50 p-4 text-left">
             <p className="text-sm text-slate-700">
-              {hasAvailability
-                ? "Our scheduling team will contact you via Phone, SMS or WhatsApp to confirm your appointment time."
-                : "Our appointment desk will call you within the next few minutes to confirm the doctor's availability and finalize your appointment. Please keep your phone available."}
+              Your appointment request has been
+              received. Our team will check the
+              doctor&apos;s availability and contact
+              you with the confirmed appointment date
+              and time.
             </p>
           </div>
         </div>
@@ -105,90 +160,84 @@ export default function StepReview({
         Review Appointment Request
       </h2>
 
-      {!hasAvailability && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm text-blue-900">
-            This doctor's consultation schedule is currently
-            being coordinated by our team. Submit your request
-            and we will call you within the next few minutes
-            with the earliest available appointment.
-          </p>
-        </div>
-      )}
-
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-6">
         <div>
           <h3 className="font-semibold">
             Doctor
           </h3>
 
-          <p>{doctor?.name}</p>
+          <p>
+            {doctor?.firstName}{" "}
+            {doctor?.lastName}
+          </p>
 
           <p className="text-sm text-slate-500">
-            {doctor?.speciality}
+            {doctor?.specialty}
           </p>
         </div>
 
-        {hasAvailability && (
-          <div>
-            <h3 className="font-semibold">
-              Appointment
-            </h3>
+        <div>
+          <h3 className="font-semibold">
+            Consultation
+          </h3>
 
-            <p>Date: {date}</p>
-
-            <p>
-              Preferred Session: {slot}
-            </p>
-          </div>
-        )}
+          <p>
+            {consultationMode === "VIDEO"
+              ? "Video Consultation"
+              : "Physical Consultation"}
+          </p>
+        </div>
 
         <div>
           <h3 className="font-semibold">
-            Patient Details
+            Patient
           </h3>
 
           <p>{patient.fullName}</p>
 
           <p>{patient.mobile}</p>
 
-          {patient.alternateMobile && (
-            <p>
-              Alternate:{" "}
-              {patient.alternateMobile}
-            </p>
-          )}
-
           {patient.email && (
             <p>{patient.email}</p>
-          )}
-
-          <p>
-            {patient.age} Years •{" "}
-            {patient.gender}
-          </p>
-
-          {patient.city && (
-            <p>{patient.city}</p>
           )}
         </div>
       </div>
 
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <p className="text-sm text-amber-800">
+          <strong>Note:</strong> This is an
+          appointment request, not a confirmed
+          appointment. Our team will check the
+          doctor&apos;s availability and contact you
+          with the confirmed date and time.
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="flex justify-between">
         <button
+          type="button"
+          disabled={submitting}
           onClick={onBack}
-          className="rounded-lg border border-slate-300 px-6 py-3"
+          className="rounded-lg border border-slate-300 px-6 py-3 disabled:opacity-50"
         >
           Back
         </button>
 
         <button
-          onClick={() => setSubmitted(true)}
-          className="rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-500"
+          type="button"
+          disabled={submitting}
+          onClick={handleSubmit}
+          className="rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {hasAvailability
-            ? "Submit Appointment Request"
-            : "Request Callback"}
+          {submitting
+            ? "Submitting Request..."
+            : "Submit Appointment Request"}
         </button>
       </div>
     </div>

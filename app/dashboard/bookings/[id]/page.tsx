@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -11,25 +11,34 @@ import BookingPriorityBadge from "@/components/bookings/BookingPriorityBadge";
 import BookingPricingPanel from "@/components/bookings/BookingPricingPanel";
 import BookingStatusPanel from "@/components/bookings/BookingStatusPanel";
 import BookingPaymentPanel from "@/components/bookings/BookingPaymentPanel";
+import BookingSchedulePanel from "@/components/bookings/BookingSchedulePanel";
 import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
 
 import bookingApi from "@/services/booking.api";
 import { Booking } from "@/types/booking";
 
 interface Props {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function BookingDetailsPage({
   params,
 }: Props) {
+  const { id } = use(params);
+
   const [booking, setBooking] =
     useState<Booking | null>(null);
 
   const [loading, setLoading] =
     useState(true);
+
+  const [declining, setDeclining] =
+    useState(false);
+
+  const [actionError, setActionError] =
+    useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -37,7 +46,7 @@ export default function BookingDetailsPage({
     async function loadBooking() {
       try {
         const response =
-          await bookingApi.getBooking(params.id);
+          await bookingApi.getBooking(id);
 
         if (mounted) {
           setBooking(response.data);
@@ -57,7 +66,47 @@ export default function BookingDetailsPage({
     return () => {
       mounted = false;
     };
-  }, [params.id]);
+  }, [id]);
+
+  async function handleDecline() {
+    if (!booking) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to decline this appointment request?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeclining(true);
+      setActionError("");
+
+      const response =
+        await bookingApi.updateStatus(
+          booking.id,
+          "CANCELLED"
+        );
+
+      setBooking(response.data);
+
+      alert(
+        "Appointment request declined."
+      );
+    } catch (error) {
+      console.error(
+        "Failed to decline booking.",
+        error
+      );
+
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Unable to decline appointment."
+      );
+    } finally {
+      setDeclining(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -88,11 +137,9 @@ export default function BookingDetailsPage({
           description="Review and manage this booking."
         >
           <div className="grid gap-6 lg:grid-cols-3">
-                        {/* LEFT COLUMN */}
-
             <div className="space-y-6 lg:col-span-2">
               <div className="rounded-xl border bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">
                   Booking Summary
                 </h2>
 
@@ -102,7 +149,7 @@ export default function BookingDetailsPage({
                       Booking Reference
                     </p>
 
-                    <p className="font-semibold">
+                    <p className="font-semibold text-slate-900">
                       {booking.reference}
                     </p>
                   </div>
@@ -112,7 +159,9 @@ export default function BookingDetailsPage({
                       Service
                     </p>
 
-                    <p>{booking.title}</p>
+                    <p className="text-slate-900">
+                      {booking.title}
+                    </p>
                   </div>
 
                   <div>
@@ -120,7 +169,9 @@ export default function BookingDetailsPage({
                       Booking Type
                     </p>
 
-                    <p>{booking.type}</p>
+                    <p className="text-slate-900">
+                      {booking.type}
+                    </p>
                   </div>
 
                   <div>
@@ -128,7 +179,7 @@ export default function BookingDetailsPage({
                       Amount
                     </p>
 
-                    <p className="font-semibold">
+                    <p className="font-semibold text-slate-900">
                       ₹
                       {(
                         booking.quotation?.finalAmount ??
@@ -143,7 +194,7 @@ export default function BookingDetailsPage({
                       Created
                     </p>
 
-                    <p>
+                    <p className="text-slate-900">
                       {new Date(
                         booking.createdAt
                       ).toLocaleString("en-IN")}
@@ -156,14 +207,16 @@ export default function BookingDetailsPage({
                         Assigned To
                       </p>
 
-                      <p>{booking.assignedTo}</p>
+                      <p className="text-slate-900">
+                        {booking.assignedTo}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="rounded-xl border bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">
                   Patient Information
                 </h2>
 
@@ -173,7 +226,9 @@ export default function BookingDetailsPage({
                       Full Name
                     </p>
 
-                    <p>{booking.customer.fullName}</p>
+                    <p className="text-slate-900">
+                      {booking.customer.fullName}
+                    </p>
                   </div>
 
                   <div>
@@ -181,7 +236,9 @@ export default function BookingDetailsPage({
                       Mobile
                     </p>
 
-                    <p>{booking.customer.mobile}</p>
+                    <p className="text-slate-900">
+                      {booking.customer.mobile}
+                    </p>
                   </div>
 
                   {booking.customer.email && (
@@ -190,7 +247,9 @@ export default function BookingDetailsPage({
                         Email
                       </p>
 
-                      <p>{booking.customer.email}</p>
+                      <p className="text-slate-900">
+                        {booking.customer.email}
+                      </p>
                     </div>
                   )}
 
@@ -200,24 +259,39 @@ export default function BookingDetailsPage({
                         Internal Notes
                       </p>
 
-                      <p>{booking.internalNotes}</p>
+                      <p className="text-slate-900">
+                        {booking.internalNotes}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <BookingPricingPanel booking={booking} />
+              <BookingPricingPanel
+                booking={booking}
+              />
+
+              {booking.type === "APPOINTMENT" && (
+                <BookingSchedulePanel
+                  booking={booking}
+                  onScheduled={(updatedBooking) => {
+                    setBooking(updatedBooking);
+                  }}
+                />
+              )}
             </div>
 
-            {/* RIGHT COLUMN */}
-
             <div className="space-y-6">
-              <BookingStatusPanel booking={booking} />
+              <BookingStatusPanel
+                booking={booking}
+              />
 
-              <BookingPaymentPanel booking={booking} />
+              <BookingPaymentPanel
+                booking={booking}
+              />
 
               <div className="rounded-xl border bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">
                   Current Status
                 </h2>
 
@@ -228,7 +302,9 @@ export default function BookingDetailsPage({
                     </p>
 
                     <PaymentStatusBadge
-                      status={booking.paymentStatus}
+                      status={
+                        booking.paymentStatus
+                      }
                     />
                   </div>
 
@@ -239,14 +315,50 @@ export default function BookingDetailsPage({
 
                     <BookingPriorityBadge
                       priority={
-                        booking.priority ?? "NORMAL"
+                        booking.priority ??
+                        "NORMAL"
                       }
                     />
                   </div>
                 </div>
               </div>
-                            <div className="rounded-xl border bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">
+
+              {booking.type === "APPOINTMENT" && (
+                <div className="rounded-xl border bg-white p-6 shadow-sm">
+                  <h2 className="mb-4 text-lg font-semibold text-slate-900">
+                    Appointment Decision
+                  </h2>
+
+                  {actionError && (
+                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                      {actionError}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={
+                      declining ||
+                      booking.status ===
+                        "CANCELLED" ||
+                      booking.status ===
+                        "COMPLETED"
+                    }
+                    onClick={handleDecline}
+                    className="w-full rounded-lg bg-red-600 py-2 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {declining
+                      ? "Declining..."
+                      : booking.status ===
+                          "CANCELLED"
+                        ? "Appointment Declined"
+                        : "Decline Appointment"}
+                  </button>
+                </div>
+              )}
+
+              <div className="rounded-xl border bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">
                   Operations
                 </h2>
 
@@ -263,13 +375,6 @@ export default function BookingDetailsPage({
                     className="rounded-lg bg-indigo-600 py-2 font-semibold text-white transition hover:bg-indigo-700"
                   >
                     Generate Payment Link
-                  </button>
-
-                  <button
-                    type="button"
-                    className="rounded-lg bg-emerald-600 py-2 font-semibold text-white transition hover:bg-emerald-700"
-                  >
-                    Schedule Service
                   </button>
 
                   <button

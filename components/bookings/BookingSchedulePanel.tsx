@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 
-import bookingService from "@/services/booking.service";
+import bookingApi from "@/services/booking.api";
 import { Booking } from "@/types/booking";
 
 interface Props {
   booking: Booking;
+  onScheduled?: (booking: Booking) => void;
 }
 
 const sessions = [
@@ -19,6 +20,7 @@ type Session = (typeof sessions)[number];
 
 export default function BookingSchedulePanel({
   booking,
+  onScheduled,
 }: Props) {
   const [serviceDate, setServiceDate] = useState(
     booking.schedule?.date ?? ""
@@ -38,39 +40,70 @@ export default function BookingSchedulePanel({
   );
 
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSchedule = () => {
-    const result =
-      bookingService.scheduleBooking(
-        booking,
-        {
-          date: serviceDate,
-          session,
-          assignedTo,
-          location,
-        }
-      );
+  async function handleSchedule() {
+    setError("");
 
-    if (!result.success) {
-      alert(result.message);
+    if (!serviceDate) {
+      setError("Please select an appointment date.");
       return;
     }
 
-    console.log(notes);
+    if (!session) {
+      setError("Please select an appointment session.");
+      return;
+    }
 
-    alert(result.message);
-  };
+    try {
+      setSaving(true);
+
+      const response =
+        await bookingApi.scheduleBooking(
+          booking.id,
+          {
+            scheduledOn: serviceDate,
+            session,
+            assignedTo,
+            location,
+            notes,
+          } as any
+        );
+
+      const updatedBooking = response.data;
+
+      alert(
+        "Appointment scheduled successfully."
+      );
+
+      onScheduled?.(updatedBooking);
+    } catch (error) {
+      console.error(
+        "Failed to schedule appointment.",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to schedule appointment."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
-      <h2 className="mb-5 text-lg font-semibold">
-        Service Scheduling
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-5 text-lg font-semibold text-slate-900">
+        Appointment Scheduling
       </h2>
 
       <div className="space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-medium">
-            Service Date
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Appointment Date
           </label>
 
           <input
@@ -79,12 +112,12 @@ export default function BookingSchedulePanel({
             onChange={(e) =>
               setServiceDate(e.target.value)
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
             Session
           </label>
 
@@ -95,7 +128,7 @@ export default function BookingSchedulePanel({
                 e.target.value as Session
               )
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
           >
             {sessions.map((item) => (
               <option
@@ -109,8 +142,8 @@ export default function BookingSchedulePanel({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium">
-            Assign Doctor / Technician
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Assigned Doctor / Staff
           </label>
 
           <input
@@ -119,14 +152,14 @@ export default function BookingSchedulePanel({
             onChange={(e) =>
               setAssignedTo(e.target.value)
             }
-            placeholder="Enter doctor or technician"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            placeholder="Enter assigned doctor / staff"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium">
-            Service Location
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Appointment Location
           </label>
 
           <input
@@ -135,13 +168,13 @@ export default function BookingSchedulePanel({
             onChange={(e) =>
               setLocation(e.target.value)
             }
-            placeholder="Clinic / Lab / Home Collection"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            placeholder="Clinic / SHIFA LIFE LINE"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
             Scheduling Notes
           </label>
 
@@ -152,16 +185,25 @@ export default function BookingSchedulePanel({
               setNotes(e.target.value)
             }
             placeholder="Internal scheduling notes..."
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
           />
         </div>
 
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
         <button
           type="button"
+          disabled={saving}
           onClick={handleSchedule}
-          className="w-full rounded-lg bg-emerald-600 py-2 font-semibold text-white transition hover:bg-emerald-700"
+          className="w-full rounded-lg bg-emerald-600 py-2 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Schedule Service
+          {saving
+            ? "Scheduling..."
+            : "Schedule Appointment"}
         </button>
       </div>
     </div>

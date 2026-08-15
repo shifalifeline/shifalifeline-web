@@ -23,11 +23,11 @@ export default function AppShell({
     "SHIFA LIFE LINE";
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-white">
+    <div className="flex min-h-screen bg-slate-100">
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-slate-800 bg-slate-900 px-8">
+        <header className="flex h-16 items-center justify-between border-b border-slate-800 bg-slate-900 px-8 text-white">
           <div>
             <h2 className="text-xl font-semibold">
               {currentPage}
@@ -49,7 +49,7 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-8 text-slate-900">
           {children}
         </main>
       </div>

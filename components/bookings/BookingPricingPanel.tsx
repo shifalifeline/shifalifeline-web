@@ -12,60 +12,135 @@ interface Props {
 export default function BookingPricingPanel({
   booking,
 }: Props) {
-  const [discount, setDiscount] = useState<number>(
-    booking.quotation?.manualDiscount ?? 0
-  );
+  const initialFee =
+    booking.quotation?.originalAmount ??
+    booking.amount ??
+    0;
 
-  const [saving, setSaving] = useState(false);
+  const initialDiscount =
+    booking.quotation?.manualDiscount ??
+    0;
+
+  const [consultationFee, setConsultationFee] =
+    useState<number>(initialFee);
+
+  const [discount, setDiscount] =
+    useState<number>(initialDiscount);
+
+  const [remarks, setRemarks] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
 
   const payableAmount = useMemo(() => {
-    const amount = booking.amount - discount;
+    const fee = Math.max(
+      0,
+      Number(consultationFee) || 0
+    );
 
-    return amount < 0 ? 0 : amount;
-  }, [booking.amount, discount]);
+    const discountAmount = Math.max(
+      0,
+      Number(discount) || 0
+    );
+
+    return Math.max(
+      0,
+      fee - discountAmount
+    );
+  }, [consultationFee, discount]);
 
   async function handleSaveQuotation() {
+    if (consultationFee <= 0) {
+      alert(
+        "Please enter the consultation fee."
+      );
+      return;
+    }
+
+    if (discount > consultationFee) {
+      alert(
+        "Discount cannot be greater than the consultation fee."
+      );
+      return;
+    }
+
     try {
       setSaving(true);
 
-      const response =
-        await bookingApi.applyQuotation(
-          booking.id,
-          {
-            originalAmount: booking.amount,
-            promotionalDiscount: 0,
-            manualDiscount: discount,
-            finalAmount: payableAmount,
-            preparedAt: new Date().toISOString(),
-            preparedBy: "Administrator",
-          }
-        );
+      await bookingApi.applyQuotation(
+        booking.id,
+        {
+          originalAmount:
+            consultationFee,
 
-      alert(response.message);
+          promotionalDiscount: 0,
+
+          manualDiscount: discount,
+
+          finalAmount:
+            payableAmount,
+
+          preparedAt:
+            new Date().toISOString(),
+
+          preparedBy:
+            "Administrator",
+
+          reason:
+            remarks || undefined,
+        }
+      );
+
+      alert(
+        "Quotation updated and pushed to the patient."
+      );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Unable to apply quotation.",
+        error
+      );
 
-      alert("Unable to apply quotation.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to update quotation."
+      );
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
-      <h2 className="mb-5 text-lg font-semibold">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-2 text-lg font-semibold text-slate-900">
         Pricing & Quotation
       </h2>
 
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <span className="text-slate-600">
-            Original Amount
-          </span>
+      <p className="mb-5 text-sm text-slate-500">
+        Set or update the amount payable by the patient.
+      </p>
 
-          <span className="font-semibold">
-            ₹{booking.amount.toLocaleString("en-IN")}
-          </span>
+      <div className="space-y-5">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Consultation / Service Fee (₹)
+          </label>
+
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={consultationFee}
+            disabled={saving}
+            onChange={(e) =>
+              setConsultationFee(
+                Number(e.target.value)
+              )
+            }
+            placeholder="Enter consultation fee"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-cyan-600"
+          />
         </div>
 
         <div>
@@ -76,35 +151,90 @@ export default function BookingPricingPanel({
           <input
             type="number"
             min={0}
-            max={booking.amount}
+            step={1}
+            max={consultationFee}
             value={discount}
             disabled={saving}
             onChange={(e) =>
-              setDiscount(Number(e.target.value))
+              setDiscount(
+                Number(e.target.value)
+              )
             }
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-cyan-600"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-cyan-600"
           />
         </div>
 
-        <div className="flex items-center justify-between border-t pt-4">
-          <span className="font-semibold">
-            Final Quotation
-          </span>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Remarks
+          </label>
 
-          <span className="text-xl font-bold text-cyan-700">
-            ₹{payableAmount.toLocaleString("en-IN")}
-          </span>
+          <textarea
+            rows={3}
+            value={remarks}
+            disabled={saving}
+            onChange={(e) =>
+              setRemarks(e.target.value)
+            }
+            placeholder="Optional quotation remarks..."
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-cyan-600"
+          />
+        </div>
+
+        <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-600">
+              Consultation / Service Fee
+            </span>
+
+            <span className="font-semibold text-slate-900">
+              ₹
+              {consultationFee.toLocaleString(
+                "en-IN"
+              )}
+            </span>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-sm text-slate-600">
+              Discount
+            </span>
+
+            <span className="font-semibold text-red-600">
+              − ₹
+              {discount.toLocaleString(
+                "en-IN"
+              )}
+            </span>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-cyan-200 pt-3">
+            <span className="font-semibold text-slate-900">
+              Final Payable Amount
+            </span>
+
+            <span className="text-xl font-bold text-cyan-700">
+              ₹
+              {payableAmount.toLocaleString(
+                "en-IN"
+              )}
+            </span>
+          </div>
         </div>
 
         <button
           type="button"
-          disabled={saving}
+          disabled={
+            saving ||
+            consultationFee <= 0 ||
+            discount > consultationFee
+          }
           onClick={handleSaveQuotation}
-          className="w-full rounded-lg bg-cyan-600 py-2 font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-cyan-600 py-2.5 font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving
-            ? "Saving..."
-            : "Save Quotation"}
+            ? "Updating & Pushing..."
+            : "Update & Push Quotation"}
         </button>
       </div>
     </div>

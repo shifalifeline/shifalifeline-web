@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import ModulePage from "@/components/healthcare/ModulePage";
-import PageHeader from "@/components/healthcare/PageHeader";
 import StatsCard from "@/components/healthcare/StatsCard";
 
 import { useDoctors } from "@/modules/doctors";
@@ -38,32 +37,78 @@ export default function DoctorDetailsPage() {
       <AppShell>
         <ModulePage>
           {!doctor ? (
-            <div className="py-10 text-center text-slate-400">
+            <div className="py-10 text-center text-slate-500">
               Loading doctor...
             </div>
           ) : (
             <>
-              <PageHeader
-                title={`Dr. ${doctor.firstName} ${doctor.lastName}`}
-                description={`Doctor Code: ${doctor.doctorCode}`}
-                action={
-                  <Link
-                    href="/dashboard/doctors"
-                    className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-white transition hover:bg-slate-800"
-                  >
-                    ← Back to Doctors
-                  </Link>
-                }
-              />
+              <div className="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-slate-900">
+                    Dr. {doctor.firstName} {doctor.lastName}
+                  </h1>
+
+                  <p className="mt-1 text-slate-500">
+                    Doctor Code: {doctor.doctorCode}
+                  </p>
+                </div>
+
+                <Link
+                  href="/dashboard/doctors"
+                  className="inline-flex w-fit items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  ← Back to Doctors
+                </Link>
+              </div>
 
               <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
-                  <div className="mb-6 border-b border-slate-800 pb-4">
-                    <h2 className="text-xl font-semibold text-white">
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-6 flex flex-col gap-6 border-b border-slate-200 pb-6 sm:flex-row sm:items-center">
+                    <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                      {doctor.photoUrl ? (
+                        <img
+                          src={doctor.photoUrl}
+                          alt={`Dr. ${doctor.firstName} ${doctor.lastName}`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center text-sm text-slate-400">
+                          No Photo
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">
+                        Dr. {doctor.firstName} {doctor.lastName}
+                      </h2>
+
+                      <p className="mt-1 text-slate-600">
+                        {doctor.specialty}
+                      </p>
+
+                      <p className="mt-2 text-sm text-slate-500">
+                        {doctor.qualification}
+                      </p>
+
+                      <span
+                        className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                          doctor.status === "Active"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {doctor.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <h2 className="text-xl font-semibold text-slate-900">
                       Doctor Information
                     </h2>
 
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-1 text-sm text-slate-500">
                       Registered SHIFA Doctor
                     </p>
                   </div>
@@ -152,12 +197,12 @@ function Info({
   value?: string | null;
 }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-400">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs uppercase tracking-wide text-slate-500">
         {label}
       </p>
 
-      <p className="mt-2 text-white">
+      <p className="mt-2 font-medium text-slate-900">
         {value || "-"}
       </p>
     </div>

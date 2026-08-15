@@ -14,56 +14,77 @@ export default function Sidebar() {
 
   const filteredNavigation = navigation
     .map((section) => {
-      const items = section.items.filter((item) => {
-        if (!user) return false;
+      const items = section.items
+        .filter((item) => {
+          if (!user) return false;
 
-        if (user.role === "ADMIN") return true;
-
-        switch (item.label) {
-          case "Dashboard":
+          if (user.role === "ADMIN") {
             return true;
+          }
 
-          case "Patients":
-          case "Doctors":
-          case "Appointments":
-          case "EMR":
-            return (
-              user.role === "DOCTOR" ||
-              user.role === "PATIENT"
-            );
+          switch (item.label) {
+            case "Dashboard":
+              return true;
 
-          case "Prescriptions":
-            return (
-              user.role === "DOCTOR" ||
-              user.role === "PHARMACY"
-            );
+            case "Appointments":
+              return (
+                user.role === "DOCTOR" ||
+                user.role === "PATIENT"
+              );
 
-          case "Laboratory":
-          case "Test Catalogue":
-          case "Diagnostic Bookings":
-            return user.role === "DIAGNOSTIC";
+            case "Patients":
+            case "Doctors":
+            case "Bookings":
+            case "EMR":
+              return user.role === "DOCTOR";
 
-          case "Products":
-          case "Categories":
-          case "Inventory":
-          case "Suppliers":
-          case "Purchase Orders":
-            return (
-              user.role === "PHARMACY" ||
-              user.role === "RETAILER"
-            );
+            case "Prescriptions":
+              return (
+                user.role === "DOCTOR" ||
+                user.role === "PHARMACY"
+              );
 
-          default:
-            return false;
-        }
-      });
+            case "Laboratory":
+            case "Test Catalogue":
+            case "Diagnostic Bookings":
+              return user.role === "DIAGNOSTIC";
+
+            case "Products":
+            case "Categories":
+            case "Inventory":
+            case "Suppliers":
+            case "Purchase Orders":
+              return (
+                user.role === "PHARMACY" ||
+                user.role === "RETAILER"
+              );
+
+            default:
+              return false;
+          }
+        })
+        .map((item) => {
+          if (
+            user?.role === "PATIENT" &&
+            item.label === "Appointments"
+          ) {
+            return {
+              ...item,
+              href: "/appointments",
+            };
+          }
+
+          return item;
+        });
 
       return {
         ...section,
         items,
       };
     })
-    .filter((section) => section.items.length > 0);
+    .filter(
+      (section) => section.items.length > 0
+    );
 
   return (
     <aside className="hidden h-screen w-72 shrink-0 border-r border-slate-800 bg-slate-900 lg:flex lg:flex-col">

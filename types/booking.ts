@@ -92,16 +92,7 @@ export interface BookingAttachment {
 
 export interface AppointmentRequestData {
   doctorId: string;
-
-  preferredDate: string;
-
-  preferredSession: PreferredSession;
-
-  reasonForVisit: string;
-
-  consultationMode?: ConsultationMode;
-
-  attachments?: BookingAttachment[];
+  consultationMode: ConsultationMode;
 }
 
 export interface DiagnosticRequestData {

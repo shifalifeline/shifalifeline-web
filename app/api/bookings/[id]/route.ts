@@ -7,6 +7,33 @@ interface RouteParams {
   }>;
 }
 
+function normalizeBooking(booking: any) {
+  return {
+    ...booking,
+
+    customer: {
+      fullName:
+        booking.customerName ??
+        [
+          booking.patient?.firstName,
+          booking.patient?.lastName,
+        ]
+          .filter(Boolean)
+          .join(" "),
+
+      mobile:
+        booking.customerPhone ??
+        booking.patient?.phone ??
+        "",
+
+      email:
+        booking.customerEmail ??
+        booking.patient?.email ??
+        "",
+    },
+  };
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: RouteParams
@@ -14,7 +41,8 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const booking = await bookingRepository.getBooking(id);
+    const booking =
+      await bookingRepository.getBooking(id);
 
     if (!booking) {
       return NextResponse.json(
@@ -28,8 +56,9 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      message: "Booking retrieved successfully.",
-      data: booking,
+      message:
+        "Booking retrieved successfully.",
+      data: normalizeBooking(booking),
     });
   } catch (error) {
     console.error(error);
@@ -37,7 +66,8 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        message: "Unable to retrieve booking.",
+        message:
+          "Unable to retrieve booking.",
       },
       { status: 500 }
     );
@@ -53,15 +83,17 @@ export async function PUT(
 
     const body = await req.json();
 
-    const booking = await bookingRepository.updateBooking(
-      id,
-      body
-    );
+    const booking =
+      await bookingRepository.updateBooking(
+        id,
+        body
+      );
 
     return NextResponse.json({
       success: true,
-      message: "Booking updated successfully.",
-      data: booking,
+      message:
+        "Booking updated successfully.",
+      data: normalizeBooking(booking),
     });
   } catch (error) {
     console.error(error);
@@ -69,7 +101,8 @@ export async function PUT(
     return NextResponse.json(
       {
         success: false,
-        message: "Unable to update booking.",
+        message:
+          "Unable to update booking.",
       },
       { status: 500 }
     );
@@ -87,7 +120,8 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Booking deleted successfully.",
+      message:
+        "Booking deleted successfully.",
     });
   } catch (error) {
     console.error(error);
@@ -95,7 +129,8 @@ export async function DELETE(
     return NextResponse.json(
       {
         success: false,
-        message: "Unable to delete booking.",
+        message:
+          "Unable to delete booking.",
       },
       { status: 500 }
     );
