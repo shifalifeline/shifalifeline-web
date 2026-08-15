@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -43,7 +43,7 @@ interface Medicine {
   inventoryBatches: InventoryBatch[];
 }
 
-export default function ViewMedicinePage() {
+function ViewMedicinePageContent() {
   const searchParams = useSearchParams();
   const medicineId = searchParams.get("id");
 
@@ -497,5 +497,30 @@ function Info({
         {value}
       </span>
     </div>
+  );
+}
+
+export default function ViewMedicinePage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedRoute
+          allowedRoles={["ADMIN", "PHARMACY"]}
+        >
+          <AppShell>
+            <ModulePage
+              title="Medicine Details"
+              description="View complete information about this medicine."
+            >
+              <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                Loading medicine...
+              </div>
+            </ModulePage>
+          </AppShell>
+        </ProtectedRoute>
+      }
+    >
+      <ViewMedicinePageContent />
+    </Suspense>
   );
 }

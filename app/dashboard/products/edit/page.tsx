@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -57,7 +57,7 @@ interface MedicineForm {
 const fieldClass =
   "rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100";
 
-export default function EditMedicinePage() {
+function EditMedicinePageContent() {
   const searchParams = useSearchParams();
   const medicineId = searchParams.get("id");
 
@@ -728,5 +728,30 @@ export default function EditMedicinePage() {
         </ModulePage>
       </AppShell>
     </ProtectedRoute>
+  );
+}
+
+export default function EditMedicinePage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedRoute
+          allowedRoles={["ADMIN", "PHARMACY"]}
+        >
+          <AppShell>
+            <ModulePage
+              title="Edit Medicine"
+              description="Update medicine master information."
+            >
+              <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                Loading medicine...
+              </div>
+            </ModulePage>
+          </AppShell>
+        </ProtectedRoute>
+      }
+    >
+      <EditMedicinePageContent />
+    </Suspense>
   );
 }
