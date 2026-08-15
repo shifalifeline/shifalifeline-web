@@ -50,6 +50,14 @@ interface IssueForm {
   remarks: string;
 }
 
+interface AdjustmentForm {
+  medicineId: string;
+  batchId: string;
+  quantity: string;
+  reference: string;
+  remarks: string;
+}
+
 const emptyForm: StockForm = {
   medicineId: "",
   batchNumber: "",
@@ -63,6 +71,14 @@ const emptyForm: StockForm = {
 };
 
 const emptyIssueForm: IssueForm = {
+  medicineId: "",
+  batchId: "",
+  quantity: "",
+  reference: "",
+  remarks: "",
+};
+
+const emptyAdjustmentForm: AdjustmentForm = {
   medicineId: "",
   batchId: "",
   quantity: "",
@@ -84,11 +100,19 @@ export default function InventoryPage() {
   const [showIssue, setShowIssue] =
     useState(false);
 
+  const [showAdjustment, setShowAdjustment] =
+    useState(false);
+
   const [form, setForm] =
     useState<StockForm>(emptyForm);
 
   const [issueForm, setIssueForm] =
     useState<IssueForm>(emptyIssueForm);
+
+  const [adjustmentForm, setAdjustmentForm] =
+    useState<AdjustmentForm>(
+      emptyAdjustmentForm
+    );
 
   const [saving, setSaving] =
     useState(false);
@@ -233,6 +257,24 @@ export default function InventoryPage() {
         batch.id === issueForm.batchId
     );
 
+  const selectedAdjustmentMedicine =
+    inventory.find(
+      (item) =>
+        item.id ===
+        adjustmentForm.medicineId
+    );
+
+  const adjustmentBatches =
+    selectedAdjustmentMedicine
+      ?.inventoryBatches ?? [];
+
+  const selectedAdjustmentBatch =
+    selectedAdjustmentMedicine?.inventoryBatches.find(
+      (batch) =>
+        batch.id ===
+        adjustmentForm.batchId
+    );
+
   function formatExpiry(date: string) {
     return new Date(
       date
@@ -241,6 +283,13 @@ export default function InventoryPage() {
       month: "short",
       year: "numeric",
     });
+  }
+
+  function isExpired(date: string) {
+    return (
+      new Date(date).getTime() <=
+      Date.now()
+    );
   }
 
   function handleChange(
@@ -270,6 +319,25 @@ export default function InventoryPage() {
       event.target;
 
     setIssueForm((previous) => ({
+      ...previous,
+      [name]: value,
+      ...(name === "medicineId"
+        ? { batchId: "" }
+        : {}),
+    }));
+  }
+
+  function handleAdjustmentChange(
+    event: React.ChangeEvent<
+      HTMLInputElement |
+        HTMLTextAreaElement |
+        HTMLSelectElement
+    >
+  ) {
+    const { name, value } =
+      event.target;
+
+    setAdjustmentForm((previous) => ({
       ...previous,
       [name]: value,
       ...(name === "medicineId"
@@ -512,6 +580,127 @@ export default function InventoryPage() {
     }
   }
 
+  async function adjustStock(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (
+      !adjustmentForm.medicineId ||
+      !adjustmentForm.batchId ||
+      !adjustmentForm.quantity
+    ) {
+      setError(
+        "Medicine, batch and adjustment quantity are required."
+      );
+      return;
+    }
+
+    const quantity =
+      Number(adjustmentForm.quantity);
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity === 0
+    ) {
+      setError(
+        "Adjustment quantity must be a non-zero whole number."
+      );
+      return;
+    }
+
+    if (!selectedAdjustmentBatch) {
+      setError(
+        "Please select a valid inventory batch."
+      );
+      return;
+    }
+
+    const newQuantity =
+      selectedAdjustmentBatch.quantity +
+      quantity;
+
+    if (newQuantity < 0) {
+      setError(
+        `Adjustment cannot reduce stock below zero. Current stock: ${selectedAdjustmentBatch.quantity} units.`
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const response = await fetch(
+        "/api/inventory/movements",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            batchId:
+              adjustmentForm.batchId,
+            type: "ADJUSTMENT",
+            quantity,
+            reference:
+              adjustmentForm.reference.trim() ||
+              undefined,
+            remarks:
+              adjustmentForm.remarks.trim() ||
+              undefined,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to adjust stock."
+        );
+      }
+
+      const action =
+        quantity > 0
+          ? `added ${quantity} units`
+          : `removed ${Math.abs(quantity)} units`;
+
+      setSuccess(
+        `Stock adjusted successfully. ${action} from ${selectedAdjustmentBatch.batchNumber}.`
+      );
+
+      setAdjustmentForm(
+        emptyAdjustmentForm
+      );
+
+      setShowAdjustment(false);
+
+      await loadInventory();
+    } catch (error) {
+      console.error(
+        "Failed to adjust stock.",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to adjust stock."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function closeReceive() {
     setShowReceive(false);
     setError("");
@@ -522,6 +711,14 @@ export default function InventoryPage() {
     setShowIssue(false);
     setError("");
     setIssueForm(emptyIssueForm);
+  }
+
+  function closeAdjustment() {
+    setShowAdjustment(false);
+    setError("");
+    setAdjustmentForm(
+      emptyAdjustmentForm
+    );
   }
 
   return (
@@ -550,6 +747,7 @@ export default function InventoryPage() {
                   setError("");
                   setSuccess("");
                   setShowIssue(false);
+                  setShowAdjustment(false);
                   setShowReceive(true);
                 }}
                 className="rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500"
@@ -563,11 +761,26 @@ export default function InventoryPage() {
                   setError("");
                   setSuccess("");
                   setShowReceive(false);
+                  setShowAdjustment(false);
                   setShowIssue(true);
                 }}
                 className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-500"
               >
                 Issue Stock
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setSuccess("");
+                  setShowReceive(false);
+                  setShowIssue(false);
+                  setShowAdjustment(true);
+                }}
+                className="rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
+              >
+                Adjust Stock
               </button>
             </div>
           }
@@ -580,7 +793,8 @@ export default function InventoryPage() {
 
           {error &&
             !showReceive &&
-            !showIssue && (
+            !showIssue &&
+            !showAdjustment && (
               <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                 {error}
               </div>
@@ -906,6 +1120,202 @@ export default function InventoryPage() {
                   <button
                     type="button"
                     onClick={closeIssue}
+                    className="rounded-lg border border-slate-300 px-6 py-3 text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {showAdjustment && (
+            <div className="mb-6 rounded-xl border border-violet-200 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Adjust Stock
+                  </h2>
+
+                  <p className="text-sm text-slate-500">
+                    Correct batch stock using a positive or negative quantity.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeAdjustment}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <form
+                onSubmit={adjustStock}
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+              >
+                <select
+                  name="medicineId"
+                  value={
+                    adjustmentForm.medicineId
+                  }
+                  onChange={
+                    handleAdjustmentChange
+                  }
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                  required
+                >
+                  <option value="">
+                    Select Medicine *
+                  </option>
+
+                  {inventory
+                    .filter(
+                      (item) => item.active
+                    )
+                    .map((item) => (
+                      <option
+                        key={item.id}
+                        value={item.id}
+                      >
+                        {item.medicineName} —{" "}
+                        {item.code}
+                      </option>
+                    ))}
+                </select>
+
+                <select
+                  name="batchId"
+                  value={
+                    adjustmentForm.batchId
+                  }
+                  onChange={
+                    handleAdjustmentChange
+                  }
+                  disabled={
+                    !adjustmentForm.medicineId
+                  }
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 disabled:bg-slate-100 disabled:text-slate-400"
+                  required
+                >
+                  <option value="">
+                    Select Batch *
+                  </option>
+
+                  {adjustmentBatches.map(
+                    (batch) => (
+                      <option
+                        key={batch.id}
+                        value={batch.id}
+                      >
+                        {batch.batchNumber} —{" "}
+                        {batch.quantity} units —{" "}
+                        {isExpired(
+                          batch.expiryDate
+                        )
+                          ? "EXPIRED"
+                          : `Exp: ${formatExpiry(
+                              batch.expiryDate
+                            )}`}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                <input
+                  name="quantity"
+                  type="number"
+                  step="1"
+                  placeholder="Adjustment (+/-) *"
+                  value={
+                    adjustmentForm.quantity
+                  }
+                  onChange={
+                    handleAdjustmentChange
+                  }
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                  required
+                />
+
+                <input
+                  name="reference"
+                  placeholder="Reference / Adjustment No."
+                  value={
+                    adjustmentForm.reference
+                  }
+                  onChange={
+                    handleAdjustmentChange
+                  }
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                />
+
+                <textarea
+                  name="remarks"
+                  placeholder="Reason / Remarks *"
+                  value={
+                    adjustmentForm.remarks
+                  }
+                  onChange={
+                    handleAdjustmentChange
+                  }
+                  rows={1}
+                  className="rounded-lg border border-slate-300 bg-white p-3 text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                />
+
+                {selectedAdjustmentBatch && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                    <p className="font-semibold text-slate-900">
+                      Current Stock
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold text-slate-900">
+                      {selectedAdjustmentBatch.quantity.toLocaleString(
+                        "en-IN"
+                      )}{" "}
+                      units
+                    </p>
+
+                    <p
+                      className={
+                        isExpired(
+                          selectedAdjustmentBatch.expiryDate
+                        )
+                          ? "font-medium text-red-600"
+                          : "text-slate-500"
+                      }
+                    >
+                      Expiry:{" "}
+                      {formatExpiry(
+                        selectedAdjustmentBatch.expiryDate
+                      )}
+                      {isExpired(
+                        selectedAdjustmentBatch.expiryDate
+                      ) && " — EXPIRED"}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 md:col-span-2 lg:col-span-3">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-lg bg-violet-600 px-6 py-3 font-semibold text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saving
+                      ? "Adjusting..."
+                      : "Adjust Stock"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={closeAdjustment}
                     className="rounded-lg border border-slate-300 px-6 py-3 text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
