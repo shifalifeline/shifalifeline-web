@@ -1,30 +1,80 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PaymentStatus } from "@prisma/client";
 import bookingRepository from "@/services/booking.repository";
+import {
+  forbiddenResponse,
+  getAuthenticatedUser,
+  unauthorizedResponse,
+} from "@/lib/auth/requireAuth";
 
 interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(
   req: NextRequest,
   { params }: RouteParams
 ) {
+  const user = await getAuthenticatedUser(req);
+
+  if (!user) return unauthorizedResponse();
+
   try {
     const { id } = await params;
-
     const body = await req.json();
 
-    const paymentStatus =
-      (body.paymentStatus as PaymentStatus) ??
-      PaymentStatus.SUCCESS;
+    if (!body.paymentStatus) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Payment status is required.",
+        },
+        { status: 400 }
+      );
+    }
 
-    const booking = await bookingRepository.processPayment(
-      id,
-      paymentStatus
-    );
+    const paymentStatus =
+      body.paymentStatus as PaymentStatus;
+
+    if (
+      paymentStatus !== PaymentStatus.PENDING &&
+      paymentStatus !== PaymentStatus.SUCCESS &&
+      paymentStatus !== PaymentStatus.FAILED
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid payment status.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const booking = await bookingRepository.getBooking(id);
+
+    if (!booking) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Booking not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    const ownsBooking =
+      user.role === "PATIENT" &&
+      booking.customerPhone === user.phone;
+
+    if (user.role !== "ADMIN" && !ownsBooking) {
+      return forbiddenResponse();
+    }
+
+    const updatedBooking =
+      await bookingRepository.processPayment(
+        id,
+        paymentStatus
+      );
 
     return NextResponse.json({
       success: true,
@@ -32,7 +82,7 @@ export async function POST(
         paymentStatus === PaymentStatus.SUCCESS
           ? "Payment received successfully."
           : "Payment status updated successfully.",
-      data: booking,
+      data: updatedBooking,
     });
   } catch (error) {
     console.error(error);

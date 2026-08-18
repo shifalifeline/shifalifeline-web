@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import bookingRepository from "@/services/booking.repository";
+import {
+  forbiddenResponse,
+  getAuthenticatedUser,
+  unauthorizedResponse,
+} from "@/lib/auth/requireAuth";
 
 interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(
   req: NextRequest,
   { params }: RouteParams
 ) {
+  const user = await getAuthenticatedUser(req);
+
+  if (!user) return unauthorizedResponse();
+  if (user.role !== "ADMIN") return forbiddenResponse();
+
   try {
     const { id } = await params;
     const body = await req.json();

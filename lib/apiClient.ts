@@ -25,7 +25,6 @@ export class ApiError extends Error {
     errors?: Record<string, string[]>
   ) {
     super(message);
-
     this.name = "ApiError";
     this.status = status;
     this.errors = errors;
@@ -34,9 +33,55 @@ export class ApiError extends Error {
 
 interface RequestOptions extends RequestInit {
   token?: string;
+  retry?: boolean;
 }
 
+const ACCESS_TOKEN_KEY = "shifa_access_token";
+const REFRESH_TOKEN_KEY = "shifa_refresh_token";
+
 class ApiClient {
+  private async refreshAccessToken() {
+    const refreshToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem(REFRESH_TOKEN_KEY)
+        : null;
+
+    if (!refreshToken) {
+      throw new ApiError("Session expired.", 401);
+    }
+
+    const response = await fetch(
+      "/api/auth/refresh",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      }
+    );
+
+    const payload = await response.json();
+
+    if (!response.ok || !payload?.accessToken) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+      }
+
+      throw new ApiError(
+        payload?.message ?? "Session expired.",
+        response.status || 401
+      );
+    }
+
+    localStorage.setItem(
+      ACCESS_TOKEN_KEY,
+      payload.accessToken
+    );
+
+    return payload.accessToken as string;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestOptions = {}
@@ -45,8 +90,17 @@ class ApiClient {
 
     headers.set("Content-Type", "application/json");
 
-    if (options.token) {
-      headers.set("Authorization", `Bearer ${options.token}`);
+    let token =
+      options.token ??
+      (typeof window !== "undefined"
+        ? localStorage.getItem(ACCESS_TOKEN_KEY) ?? undefined
+        : undefined);
+
+    if (token) {
+      headers.set(
+        "Authorization",
+        `Bearer ${token}`
+      );
     }
 
     const response = await fetch(
@@ -57,6 +111,24 @@ class ApiClient {
       }
     );
 
+    if (
+      response.status === 401 &&
+      options.retry !== false &&
+      typeof window !== "undefined"
+    ) {
+      try {
+        token = await this.refreshAccessToken();
+
+        return this.request<T>(endpoint, {
+          ...options,
+          token,
+          retry: false,
+        });
+      } catch {
+        // Fall through to the original 401 response.
+      }
+    }
+
     let payload: unknown = null;
 
     try {
@@ -66,7 +138,8 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      const error = payload as Partial<ApiFailure> | null;
+      const error =
+        payload as Partial<ApiFailure> | null;
 
       throw new ApiError(
         error?.message ?? "Something went wrong.",
@@ -85,11 +158,7 @@ class ApiClient {
     });
   }
 
-  post<T>(
-    url: string,
-    body: unknown,
-    token?: string
-  ) {
+  post<T>(url: string, body: unknown, token?: string) {
     return this.request<T>(url, {
       method: "POST",
       body: JSON.stringify(body),
@@ -97,11 +166,7 @@ class ApiClient {
     });
   }
 
-  put<T>(
-    url: string,
-    body: unknown,
-    token?: string
-  ) {
+  put<T>(url: string, body: unknown, token?: string) {
     return this.request<T>(url, {
       method: "PUT",
       body: JSON.stringify(body),
@@ -109,11 +174,7 @@ class ApiClient {
     });
   }
 
-  patch<T>(
-    url: string,
-    body: unknown,
-    token?: string
-  ) {
+  patch<T>(url: string, body: unknown, token?: string) {
     return this.request<T>(url, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -121,10 +182,7 @@ class ApiClient {
     });
   }
 
-  delete<T>(
-    url: string,
-    token?: string
-  ) {
+  delete<T>(url: string, token?: string) {
     return this.request<T>(url, {
       method: "DELETE",
       token,
