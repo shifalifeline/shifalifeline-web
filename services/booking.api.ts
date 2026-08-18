@@ -29,7 +29,10 @@ class BookingApi {
   ) {
     return apiClient.post<
       ApiResponse<Booking>
-    >(API.BOOKINGS.CREATE, booking);
+    >(
+      API.BOOKINGS.CREATE,
+      booking
+    );
   }
 
   async updateBooking(
@@ -38,24 +41,20 @@ class BookingApi {
   ) {
     return apiClient.put<
       ApiResponse<Booking>
-    >(API.BOOKINGS.UPDATE(id), booking);
+    >(
+      API.BOOKINGS.UPDATE(id),
+      booking
+    );
   }
 
   async deleteBooking(id: string) {
     return apiClient.delete<
       ApiResponse<null>
-    >(API.BOOKINGS.DELETE(id));
+    >(
+      API.BOOKINGS.DELETE(id)
+    );
   }
 
-  /**
-   * Sprint 30
-   * Backend contract:
-   * {
-   *   amount,
-   *   discount,
-   *   remarks
-   * }
-   */
   async applyQuotation(
     id: string,
     quotation: BookingQuotation
@@ -65,11 +64,15 @@ class BookingApi {
     >(
       API.BOOKINGS.QUOTATION(id),
       {
-        amount: quotation.finalAmount,
+        amount:
+          quotation.finalAmount,
+
         discount:
           quotation.promotionalDiscount +
           quotation.manualDiscount,
-        remarks: quotation.reason,
+
+        remarks:
+          quotation.reason,
       }
     );
   }
@@ -116,8 +119,26 @@ class BookingApi {
       }
     );
   }
+
+  async processPayment(
+    id: string,
+    paymentStatus:
+      | "PENDING"
+      | "SUCCESS"
+      | "FAILED"
+  ) {
+    return apiClient.post<
+      ApiResponse<Booking>
+    >(
+      API.BOOKINGS.PAYMENT(id),
+      {
+        paymentStatus,
+      }
+    );
+  }
 }
 
-const bookingApi = new BookingApi();
+const bookingApi =
+  new BookingApi();
 
 export default bookingApi;
